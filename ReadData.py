@@ -31,7 +31,7 @@ class MainUI(QMainWindow):
 
     def GetData(self) -> None:
         line = 0
-        with (serial.Serial('COM5', baudrate=921600, timeout=2.9)) as self.serialData:
+        with (serial.Serial('COM5', baudrate=921600, timeout=3)) as self.serialData:
 
             # Read data from COM port
             command = 'S'
@@ -40,12 +40,9 @@ class MainUI(QMainWindow):
             self.serialData.write(command.encode())
             # line2 = self.serialData.readline()
             # line1 = self.serialData.read(262144)
-            line1 = self.serialData.read(300000)
-
-        # if line1 == line2:
-        #     print('ok')
-        print(len(line1))
-        # print(len(line2))
+            line = self.serialData.read(10)
+            
+        print(line)
 
     def GetData2(self) -> list:
         try:
