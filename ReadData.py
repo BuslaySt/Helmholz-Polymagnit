@@ -1,5 +1,7 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
+from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 from PyQt5.uic import loadUi
+from PyQt5.QtCore import Qt
 import sys, datetime
 import serial.tools.list_ports
 # import minimalmodbus
@@ -11,27 +13,30 @@ class MainUI(QMainWindow):
         super(MainUI, self).__init__()
         loadUi("ReadData.ui", self)
 
-        print(list(serial.tools.list_ports.comports(include_links=False)))
-        # print(serial.tools.list_ports.ListPortInfo())
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            self.cBox_COMPort.addItem(port.device)
 
         ''' Привязка кнопок '''
         # Движение ротора
         self.pBtn1_Read.clicked.connect(self.ReadData)
         self.pBtn2_Get.clicked.connect(self.GetData)
+        self.pBtn3_Show.clicked.connect(self.ShowData)
         
-       
     def ReadData(self) -> None:
-        with (serial.Serial('COM5', baudrate=921600)) as self.serialData:
+        port = self.cBox_COMPort.currentText()
+        with (serial.Serial(port, baudrate=921600)) as self.serialData:
 
             # Read data from COM port
             command = 'R'
 
             # Send the command to the DataPort
             self.serialData.write(command.encode())
+        time.sleep(3)
 
     def GetData(self) -> None:
-        line = 0
-        with (serial.Serial('COM5', baudrate=921600, timeout=3)) as self.serialData:
+        port = self.cBox_COMPort.currentText()
+        with (serial.Serial(port, baudrate=921600, timeout=3)) as self.serialData:
 
             # Read data from COM port
             command = 'S'
@@ -40,30 +45,105 @@ class MainUI(QMainWindow):
             self.serialData.write(command.encode())
             # line2 = self.serialData.readline()
             # line1 = self.serialData.read(262144)
-            line = self.serialData.read(10)
-            
-        print(line)
+            line = self.serialData.read(262144)
+        print(len(line))
+        self.line = []
+        for num in range(0, len(line), 2):
+            hi_byte = line[num]
+            hi_byte = hi_byte if hi_byte < 128 else hi_byte-256
+            lo_byte = line[num+1]    
+            self.line.append(hi_byte*256+lo_byte)
+        print(len(self.line))
 
-    def GetData2(self) -> list:
-        try:
-            with (serial.Serial('COM5', baudrate=921600)) as self.serialData:
+        with open("data.txt", "w") as f:
+            f.write(str(self.line))
 
-                # Read data from COM port
-                command = 'S'
+    def ShowData(self) -> None:
+        if hasattr(self, 'chart_view'):
+            self.chart_view.deleteLater()
+        if not hasattr(self, 'line'):
+            self.line = [10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172, 10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172]
+        # Создаем график
+        self.chart = QChart()
+        self.chart.setTitle("График числовых данных")
+        self.chart.legend().setVisible(False)
+        
+        # Создаем серию данных
+        series = QLineSeries()
+        
+        # Добавляем точки данных
+        for i, value in enumerate(self.line[6:]):
+            series.append(i, value)
+        
+        # Добавляем серию на график
+        self.chart.addSeries(series)
+        
+        # Настраиваем оси
+        axis_x = QValueAxis()
+        axis_x.setTitleText("Индекс")
+        axis_x.setLabelFormat("%d")
+        self.chart.addAxis(axis_x, Qt.AlignBottom)
+        series.attachAxis(axis_x)
+        
+        axis_y = QValueAxis()
+        axis_y.setTitleText("Значение")
+        axis_y.setLabelFormat("%d")
+        self.chart.addAxis(axis_y, Qt.AlignLeft)
+        
 
-                # Send the command to the DataPort
-                self.serialData.read(command.encode())
-                line = str(self.serialData.readline().strip()) # Строка вида 
+        series.attachAxis(axis_y)
+        
+        # Создаем виджет для отображения графика
+        self.chart_view = QChartView(self.chart)
+        # chart_view.setRenderHint(QChartView.Antialiasing)
+        
+        # Устанавливаем центральный виджет
+        self.vFrameLayout.addWidget(self.chart_view)
 
-            print(len(line))
+    def ShowData(self) -> None:
+        if hasattr(self, 'chart_view'):
+            self.chart_view.deleteLater()
+        if not hasattr(self, 'line'):
+            self.line = [10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172, 10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172]
+        # Создаем график
+        self.chart = QChart()
+        self.chart.setTitle("График числовых данных")
+        self.chart.legend().setVisible(False)
+        
+        # Создаем серию данных
+        series = QLineSeries()
+        
+        # Добавляем точки данных
+        for i, value in enumerate(self.line[6:]):
+            series.append(i, value)
+        
+        # Добавляем серию на график
+        self.chart.addSeries(series)
+        
+        # Настраиваем оси
+        axis_x = QValueAxis()
+        axis_x.setTitleText("Индекс")
+        axis_x.setLabelFormat("%d")
+        self.chart.addAxis(axis_x, Qt.AlignBottom)
+        series.attachAxis(axis_x)
+        
+        axis_y = QValueAxis()
+        axis_y.setTitleText("Значение")
+        axis_y.setLabelFormat("%d")
+        self.chart.addAxis(axis_y, Qt.AlignLeft)
+        
 
+        series.attachAxis(axis_y)
+        
+        # Создаем виджет для отображения графика
+        self.chart_view = QChartView(self.chart)
+        # chart_view.setRenderHint(QChartView.Antialiasing)
+        
+        # Устанавливаем центральный виджет
+        self.vFrameLayout.addWidget(self.chart_view)
 
-            return line
-
-        except ValueError as ve:             print("Error:", str(ve))
-        except serial.SerialException as se: print("Serial port error:", str(se))
-        except Exception as e:               print("An error occurred:", str(e))
-
+                
+        
 if __name__ == '__main__':
     # app = QApplication(sys.argv)
     app = QApplication([])
