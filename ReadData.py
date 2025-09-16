@@ -7,6 +7,7 @@ import serial.tools.list_ports
 # import minimalmodbus
 # from icecream import ic
 import time
+import pandas as pd
 
 class MainUI(QMainWindow):
     def __init__(self):
@@ -32,28 +33,28 @@ class MainUI(QMainWindow):
 
             # Send the command to the DataPort
             self.serialData.write(command.encode())
-        time.sleep(3)
+        time.sleep(11)
+        print('Ok')
 
     def GetData(self) -> None:
         port = self.cBox_COMPort.currentText()
-        with (serial.Serial(port, baudrate=921600, timeout=3)) as self.serialData:
+        with (serial.Serial(port, baudrate=921600, timeout=23)) as self.serialData:
 
             # Read data from COM port
             command = 'S'
 
             # Send the command to the DataPort
             self.serialData.write(command.encode())
-            # line2 = self.serialData.readline()
-            # line1 = self.serialData.read(262144)
-            line = self.serialData.read(262144)
-        print(len(line))
+            # line = self.serialData.read(2097152)
+            line = self.serialData.read(2097152)
+        print(line[len(line)/2-5:len(line)/2+5])
         self.line = []
-        for num in range(0, len(line), 2):
+        for num in range(0, len(line)/2, 2):
             hi_byte = line[num]
             hi_byte = hi_byte if hi_byte < 128 else hi_byte-256
             lo_byte = line[num+1]    
             self.line.append(hi_byte*256+lo_byte)
-        print(len(self.line))
+        print(pd.DataFrame(self.line))
 
         with open("data.txt", "w") as f:
             f.write(str(self.line))
@@ -61,8 +62,8 @@ class MainUI(QMainWindow):
     def ShowData(self) -> None:
         if hasattr(self, 'chart_view'):
             self.chart_view.deleteLater()
-        if not hasattr(self, 'line'):
-            self.line = [10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172, 10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172]
+        # if not hasattr(self, 'line'):
+        #     self.line = [10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172, 10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172]
         # Создаем график
         self.chart = QChart()
         self.chart.setTitle("График числовых данных")
@@ -72,7 +73,7 @@ class MainUI(QMainWindow):
         series = QLineSeries()
         
         # Добавляем точки данных
-        for i, value in enumerate(self.line[6:]):
+        for i, value in enumerate(self.line):
             series.append(i, value)
         
         # Добавляем серию на график
@@ -99,49 +100,6 @@ class MainUI(QMainWindow):
         
         # Устанавливаем центральный виджет
         self.vFrameLayout.addWidget(self.chart_view)
-
-    def ShowData(self) -> None:
-        if hasattr(self, 'chart_view'):
-            self.chart_view.deleteLater()
-        if not hasattr(self, 'line'):
-            self.line = [10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172, 10114, 11174, 11395, 11176, 11394, 11203, 11397, 11180, 11395, 11172]
-        # Создаем график
-        self.chart = QChart()
-        self.chart.setTitle("График числовых данных")
-        self.chart.legend().setVisible(False)
-        
-        # Создаем серию данных
-        series = QLineSeries()
-        
-        # Добавляем точки данных
-        for i, value in enumerate(self.line[6:]):
-            series.append(i, value)
-        
-        # Добавляем серию на график
-        self.chart.addSeries(series)
-        
-        # Настраиваем оси
-        axis_x = QValueAxis()
-        axis_x.setTitleText("Индекс")
-        axis_x.setLabelFormat("%d")
-        self.chart.addAxis(axis_x, Qt.AlignBottom)
-        series.attachAxis(axis_x)
-        
-        axis_y = QValueAxis()
-        axis_y.setTitleText("Значение")
-        axis_y.setLabelFormat("%d")
-        self.chart.addAxis(axis_y, Qt.AlignLeft)
-        
-
-        series.attachAxis(axis_y)
-        
-        # Создаем виджет для отображения графика
-        self.chart_view = QChartView(self.chart)
-        # chart_view.setRenderHint(QChartView.Antialiasing)
-        
-        # Устанавливаем центральный виджет
-        self.vFrameLayout.addWidget(self.chart_view)
-
                 
         
 if __name__ == '__main__':
