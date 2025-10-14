@@ -69,60 +69,94 @@ class DataProcessor:
     def apply_median_filter(df, window_size=3):
         """Применение медианного фильтра"""
         df_filtered = pd.DataFrame(columns=['encoder', 'data'])
-        df_filtered['data'] = signal.medfilt(df['data'], kernel_size=window_size)
-        df_filtered['encoder'] = signal.medfilt(df['encoder'], kernel_size=window_size)
+        df_filtered['data'] = signal.medfilt(df['data'], kernel_size=window_size)[window_size*2:-window_size*2]
+        df_filtered['encoder'] = signal.medfilt(df['encoder'], kernel_size=window_size)[window_size*2:-window_size*2]
         return df_filtered
     
     @staticmethod
-    def integrate_data(df_filtered, step=20):
-        """Интегрирование данных"""
-        # фильтрация сделана сразу после получения данных
-        # df_filtered = DataProcessor.apply_median_filter(df)
-        
+    def split_data_segments(df_filtered):
+        """1. Разделение данных на сегменты по encoder"""
         # Находим точки разделения по encoder
         split_points = df_filtered.index[
             (df_filtered['encoder'].shift(1) == 9999) & 
             (df_filtered['encoder'] == 0)
         ]
         
-        # Создаем интервалы
-        bins = list(range(0, 10000, step))
-        datasets = []
-        
-        # Обрабатываем каждый сегмент данных
+        # Создаем сегменты данных
+        segments = []
         for i in range(len(split_points) - 1):
             start_idx = split_points[i]
             end_idx = split_points[i + 1]
-            dataset_part = df_filtered.iloc[start_idx:end_idx].copy()
-            datasets.append(
-                dataset_part.groupby('encoder', as_index=False)['data'].mean()
+            segment = df_filtered.iloc[start_idx:end_idx].copy()
+            # Cуммирование данных по отсчётам encoder
+            segments.append(
+                segment.groupby('encoder', as_index=False)['data'].sum()
             )
         
-        # Интегрируем данные
+        return segments
+    
+    @staticmethod
+    def integrate_segment(segment, step=20):
+        """2. Интегрирование одного сегмента данных"""
+        bins = list(range(0, 10000, step))
+        
+        # Разделение и группировка
+        segment['bin'] = pd.cut(
+            segment['encoder'], bins=bins, right=False, labels=bins[:-1]
+        )
+        grouped = segment.groupby('bin', observed=False)['data'].sum().reset_index()
+        
+        # Линейное интегрирование
+        integrated_data = grouped['data'].cumsum()
+        
+        return integrated_data
+    
+    @staticmethod
+    def apply_linear_correction(integrated_data):
+        """3. Линейная коррекция интегрированного сегмента"""
+        difference = integrated_data.iloc[0] - integrated_data.iloc[-1]
+        n = len(integrated_data)
+        
+        corrected_data = []
+        for i, value in enumerate(integrated_data):
+            correction = (difference * i) / (n - 1) if n > 1 else 0
+            corrected_data.append(value + correction)
+        
+        return corrected_data
+    
+    @staticmethod
+    def average_segments(segments_data, step=20):
+        """4. Усреднение всех сегментов"""
+        bins = list(range(0, 10000, step))
         df_integral = pd.DataFrame(index=range(len(bins) - 1))
         
-        for i, dataset in enumerate(datasets):
-            dataset['bin'] = pd.cut(
-                dataset['encoder'], bins=bins, right=False, labels=bins[:-1]
-            )
-            grouped = dataset.groupby('bin', observed=False)['data'].mean().reset_index()
-            
-            # Линейное интегрирование с коррекцией
-            line = (grouped['data'] * step).cumsum()
-            difference = line.iloc[0] - line.iloc[-1]
-            n = len(line)
-            
-            corrected_data = []
-            for j, value in enumerate(line):
-                correction = (difference * j) / (n - 1) if n > 1 else 0
-                corrected_data.append(value + correction)
-            
-            df_integral[f'integral_data_{i+1}'] = corrected_data
+        for i, segment_data in enumerate(segments_data):
+            df_integral[f'integral_data_{i+1}'] = segment_data
         
-        # Возвращаем усредненные данные
-        result_df = pd.DataFrame(columns=['encoder', 'data'], index=range(500))
-        result_df['encoder'] = range(500)
+        # Возвращаем усредненные данные по нескольким поворотам
+        result_df = pd.DataFrame(columns=['encoder', 'data'], index=range(len(bins) - 1))
+        result_df['encoder'] = range(len(bins) - 1)
         result_df['data'] = df_integral.mean(axis=1)
+        
+        return result_df
+    
+    @staticmethod
+    def integrate_df(df_filtered, step=20):
+        """Полное интегрирование данных - основной метод
+        df_filtered - обработанные данные
+        step - шаг интегрирования - 10000 / 20 = 500 градусов
+        """
+        # 1. Разделение на сегменты
+        segments = DataProcessor.split_data_segments(df_filtered)
+        
+        # 2-3. Интегрирование и коррекция каждого оборота
+        integrated_segments = []
+        for segment in segments:
+            integrated_data = DataProcessor.integrate_segment(segment, step)
+            integrated_segments.append(integrated_data)
+        
+        # 4. Усреднение всех оборотов
+        result_df = DataProcessor.average_segments(integrated_segments, step)
         
         return result_df
 
@@ -143,24 +177,6 @@ class MotorController:
         except Exception as e:
             print(f"Ошибка управления мотором: {e}")
             return 0
-    
-    @staticmethod
-    def start_motor(port, direction=1, speed=50):
-        """Непрерывный запуск мотора"""
-        try:
-            with serial.Serial(port, baudrate=57600, bytesize=8, 
-                             parity='N', stopbits=1, timeout=0) as serial_conn:
-                command = f'ON\rMOVE C(inp1)D({direction})F({speed})\rOFF\r'
-                return serial_conn.write(command.encode("utf-8"))
-        except Exception as e:
-            print(f"Ошибка запуска мотора: {e}")
-            return 0
-    
-    @staticmethod
-    def stop_motor(port):
-        """Остановка мотора"""
-        # Реализация остановки мотора
-        pass
 
 
 class MainUI(QMainWindow):
@@ -170,6 +186,7 @@ class MainUI(QMainWindow):
         
         self.serial_worker = None
         self.df = None
+        self.df_processed = None  # Для хранения обработанных данных
         self.data_processor = DataProcessor()
         self.motor_controller = MotorController()
         
@@ -186,15 +203,18 @@ class MainUI(QMainWindow):
         self.cBox_MotorPort.setCurrentIndex(1)
         self.cBox_SensorPort.setCurrentIndex(0)
 
-
         # Привязка кнопок
-        self.pBtn_Read.clicked.connect(self.read_sensor)
-        self.pBtn_Get.clicked.connect(self.get_data)
-        self.pBtn_Int.clicked.connect(self.integrate_data)
-        self.pBtn_Motor.clicked.connect(self.run_motor)
-        self.pBtn_MotorStart.clicked.connect(self.start_motor)
-        self.pBtn_Show.clicked.connect(self.show_data)
+        self.pBtn_ReadSensor.clicked.connect(self.read_sensor)
+        self.pBtn_GetData.clicked.connect(self.get_data)
+
+        self.pBtn_Outliers.clicked.connect(self.remove_outliers)
+        self.pBtn_Integrate.clicked.connect(self.integrate_data)
+        self.pBtn_Slope.clicked.connect(self.remove_slope)
         
+        self.pBtn_Motor.clicked.connect(self.run_motor)
+        self.pBtn_Show.clicked.connect(self.show_data)
+        self.pBtn_Save.clicked.connect(self.save_data)
+                
         # Блокировка кнопок во время операций
         self.update_buttons_state(True)
 
@@ -208,20 +228,22 @@ class MainUI(QMainWindow):
     def init_graph(self):
         """Инициализация графика"""
         self.chart = QChart()
-        self.chart.setTitle("Числовые данные")
+        # self.chart.setTitle("Числовые данные")
         self.chart.legend().setVisible(False)
         
         self.series = QLineSeries()
         self.chart.addSeries(self.series)
         self.chart.createDefaultAxes()
         
-        axis_x = self.chart.axisX()
-        axis_x.setTitleText("Сигнал")
-        axis_x.setLabelFormat("%d")
+        self.chart.axisX().setLabelFormat("%d")
+        # axis_x = self.chart.axisX()
+        # axis_x.setTitleText("Сигнал")
+        # axis_x.setLabelFormat("%d")
         
-        axis_y = self.chart.axisY()
-        axis_y.setTitleText("Индекс")
-        axis_y.setLabelFormat("%d")
+        self.chart.axisY().setLabelFormat("%d")
+        # axis_y = self.chart.axisY()
+        # axis_y.setTitleText("Индекс")
+        # axis_y.setLabelFormat("%d")
         
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.Antialiasing)
@@ -229,13 +251,17 @@ class MainUI(QMainWindow):
     
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
-        self.pBtn_Read.setEnabled(enabled)
-        self.pBtn_Get.setEnabled(enabled)
-        self.pBtn_Int.setEnabled(enabled)
+        self.pBtn_ReadSensor.setEnabled(enabled)
+        self.pBtn_GetData.setEnabled(enabled)
+
+        self.pBtn_Outliers.setEnabled(enabled)
+        self.pBtn_Integrate.setEnabled(enabled)
+        self.pBtn_Slope.setEnabled(enabled)
+        
         self.pBtn_Motor.setEnabled(enabled)
-        self.pBtn_MotorStart.setEnabled(enabled)
         self.pBtn_Show.setEnabled(enabled)
-    
+        self.pBtn_Save.setEnabled(enabled)
+                
     def set_wait_cursor(self, waiting):
         """Установка курсора ожидания"""
         if waiting:
@@ -282,10 +308,12 @@ class MainUI(QMainWindow):
     def on_data_received(self, raw_data):
         """Обработка полученных данных"""
         try:
-            df = self.data_processor.process_raw_data(raw_data)
-            self.df = DataProcessor.apply_median_filter(df)
+            self.df = self.data_processor.process_raw_data(raw_data)
+            # self.df = DataProcessor.apply_median_filter(df)
+            self.df_processed = self.df.copy()  # Сохраняем копию для обработки
             self.show_status_message('Данные получены! Готово к интегрированию!')
             print('Данные получены! Готово к интегрированию!')
+            self.update_graph(self.df_processed)  # Обновляем график после получения данных
         except Exception as e:
             self.on_serial_error(f"Ошибка обработки данных: {str(e)}")
     
@@ -303,51 +331,87 @@ class MainUI(QMainWindow):
     
     def integrate_data(self):
         """Интегрирование данных"""
-        if not hasattr(self, 'df') or self.df is None:
-            try:
-                self.df = pd.read_csv(os.path.join('data', 'data1.csv'), index_col=0)
-            except FileNotFoundError:
-                QMessageBox.warning(self, "Ошибка", "Файл данных не найден")
-                return
+        if self.df_processed is None:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для интегрирования")
+            return
         
         # Интегрирование может занять время, показываем прогресс
         self.set_wait_cursor(True)
         try:
-            self.df = self.data_processor.integrate_data(self.df)
+            self.df_integrated = self.data_processor.integrate_df(self.df_processed)
             self.show_status_message('Данные проинтегрированы!')
             print('Данные проинтегрированы!')
+            self.update_graph(self.df_integrated)  # Обновляем график после интегрирования
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка интегрирования: {str(e)}")
         finally:
             self.set_wait_cursor(False)
     
-    def show_data(self):
-        """Отображение данных на графике"""
-        # Устанавливаем курсор ожидания
-        self.show_status_message('Выводим данные...', 500)
+    def remove_outliers(self):
+        """Удаление выбросов из сырых данных"""
+        if self.df_processed is None:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для обработки")
+            return
+        
         self.set_wait_cursor(True)
-
-        if not hasattr(self, 'df') or self.df is None:
-            try:
-                df = pd.read_csv(os.path.join('data', 'data1.csv'), index_col=0)
-                self.df = DataProcessor.apply_median_filter(df)
-            except FileNotFoundError:
-                QMessageBox.warning(self, "Ошибка", "Нет данных для отображения")
-                return
+        try:
+            self.df_processed = self.data_processor.apply_median_filter(self.df, window_size=3)
+            self.show_status_message('Выбросы удалены!')
+            print('Выбросы удалены!')
+            self.update_graph(self.df_processed)  # Обновляем график после удаления выбросов
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка удаления выбросов: {str(e)}")
+        finally:
+            self.set_wait_cursor(False)
+    
+    def remove_slope(self):
+        """Удаление линейного наклона из данных"""
+        if not hasattr(self, 'df_integrated') or self.df_integrated is None:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для обработки")
+            return
         
-        # self.series.clear()
-        self.series = QLineSeries()
-        
-        # Добавляем точки данных
-        for row in self.df.itertuples():
-            self.series.append(row.Index, row.data)
+        self.set_wait_cursor(True)
+        try:
+            self.df_integrated.data = self.data_processor.apply_linear_correction(self.df_integrated.data)
+            self.show_status_message('Наклон удален!')
+            print('Наклон удален!')
+            self.update_graph(self.df_integrated)  # Обновляем график после удаления наклона
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка удаления наклона: {str(e)}")
+        finally:
+            self.set_wait_cursor(False)
+    
+    def update_graph(self, df):
+        """Обновление графика текущими данными"""
+        if self.df_processed is None:
+            return
         
         # Обновляем график
         self.chart.removeAllSeries()
-        self.chart.addSeries(self.series)
-        self.chart.createDefaultAxes()
 
-        # Восстанавливаем обычный курсор
+        # Создаем новую серию
+        series = QLineSeries()
+        
+        # Добавляем точки данных
+        for row in df.itertuples():
+            series.append(row.Index, row.data)
+        
+        self.chart.addSeries(series)
+        self.chart.createDefaultAxes()
+        self.chart.axisX().setLabelFormat("%d")
+        self.chart.axisY().setLabelFormat("%d")
+    
+    def show_data(self):
+        """Отображение данных на графике"""
+        if self.df_processed is None:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для отображения, загрузка тестовых данных")
+            self.df = pd.read_csv(os.path.join('data', 'data.csv'), index_col=0)
+            self.df_processed = self.df.copy()  # Сохраняем копию для обработки
+            return
+        
+        self.show_status_message('Выводим данные...', 500)
+        self.set_wait_cursor(True)
+        self.update_graph(self.df_processed)
         self.set_wait_cursor(False)
     
     def run_motor(self):
@@ -360,23 +424,20 @@ class MainUI(QMainWindow):
         # Запускаем в отдельном потоке, чтобы не блокировать UI
         QTimer.singleShot(0, lambda: self.motor_controller.run_motor(port))
     
-    def start_motor(self):
-        """Непрерывный запуск мотора"""
-        port = self.cBox_MotorPort.currentText()
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порт мотора")
+    def save_data(self):
+        """Сохранение данных в файл"""
+        if self.df_processed is None:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для сохранения")
             return
         
-        QTimer.singleShot(0, lambda: self.motor_controller.start_motor(port))
-    
-    def stop_motor(self):
-        """Остановка мотора"""
-        port = self.cBox_MotorPort.currentText()
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порт мотора")
-            return
-        
-        QTimer.singleShot(0, lambda: self.motor_controller.stop_motor(port))
+        try:
+            datadir = 'data'
+            filename = f"data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+            self.df_processed.to_csv(os.path.join(datadir, filename))
+            self.show_status_message(f'Данные сохранены в файл: {filename}')
+            print(f'Данные сохранены в файл: {filename}')
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения данных: {str(e)}")
 
 
 if __name__ == '__main__':
