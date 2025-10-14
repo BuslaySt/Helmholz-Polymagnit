@@ -102,50 +102,7 @@
       <item>
        <layout class="QHBoxLayout" name="hLayout_2_1">
         <item>
-         <widget class="QPushButton" name="pBtn_Read">
-          <property name="minimumSize">
-           <size>
-            <width>200</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Read sensor</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pBtn_Get">
-          <property name="minimumSize">
-           <size>
-            <width>200</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Get data</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pBtn_Int">
-          <property name="minimumSize">
-           <size>
-            <width>200</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Integrate data</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="hLayout_2_2">
-        <item>
-         <spacer name="horizontalSpacer_3">
+         <spacer name="horizontalSpacer">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -171,19 +128,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pBtn_MotorStart">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>start Motor</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="pBtn_Show">
           <property name="minimumSize">
            <size>
@@ -192,12 +136,25 @@
            </size>
           </property>
           <property name="text">
-           <string>Show data</string>
+           <string>Show Data</string>
           </property>
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_4">
+         <widget class="QPushButton" name="pBtn_Save">
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Save Data</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -208,6 +165,79 @@
            </size>
           </property>
          </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="hLayout_2_2">
+        <item>
+         <widget class="QPushButton" name="pBtn_ReadSensor">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>1.1. Read sensor</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pBtn_GetData">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>1.2. Get data</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="hLayout_2_3">
+        <item>
+         <widget class="QPushButton" name="pBtn_Outliers">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>2.1. Выбросы</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pBtn_Integrate">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>2.2. Интеграл</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pBtn_Slope">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>2.3. Наклон</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
