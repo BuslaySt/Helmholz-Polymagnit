@@ -338,10 +338,10 @@ class MainUI(QMainWindow):
         # Интегрирование может занять время, показываем прогресс
         self.set_wait_cursor(True)
         try:
-            self.df_integrated = self.data_processor.integrate_df(self.df_processed)
+            self.df_processed = self.data_processor.integrate_df(self.df_processed)
             self.show_status_message('Данные проинтегрированы!')
             print('Данные проинтегрированы!')
-            self.update_graph(self.df_integrated)  # Обновляем график после интегрирования
+            self.update_graph(self.df_processed)  # Обновляем график после интегрирования
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка интегрирования: {str(e)}")
         finally:
@@ -366,16 +366,16 @@ class MainUI(QMainWindow):
     
     def remove_slope(self):
         """Удаление линейного наклона из данных"""
-        if not hasattr(self, 'df_integrated') or self.df_integrated is None:
+        if not hasattr(self, 'df_processed') or self.df_processed is None:
             QMessageBox.warning(self, "Ошибка", "Нет данных для обработки")
             return
         
         self.set_wait_cursor(True)
         try:
-            self.df_integrated.data = self.data_processor.apply_linear_correction(self.df_integrated.data)
+            self.df_processed.data = self.data_processor.apply_linear_correction(self.df_processed.data)
             self.show_status_message('Наклон удален!')
             print('Наклон удален!')
-            self.update_graph(self.df_integrated)  # Обновляем график после удаления наклона
+            self.update_graph(self.df_processed)  # Обновляем график после удаления наклона
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка удаления наклона: {str(e)}")
         finally:
@@ -433,7 +433,9 @@ class MainUI(QMainWindow):
         try:
             datadir = 'data'
             filename = f"data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+            
             self.df_processed.to_csv(os.path.join(datadir, filename))
+            
             self.show_status_message(f'Данные сохранены в файл: {filename}')
             print(f'Данные сохранены в файл: {filename}')
         except Exception as e:
