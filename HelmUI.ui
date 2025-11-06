@@ -6,12 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>634</width>
+    <width>853</width>
     <height>752</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>AMT&amp;C Helmholz Coils Magnet measurements</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>AMTClogo-M.ico</normaloff>AMTClogo-M.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -228,7 +232,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>634</width>
+     <width>853</width>
      <height>21</height>
     </rect>
    </property>
