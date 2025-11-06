@@ -204,16 +204,19 @@ class MainUI(QMainWindow):
         self.cBox_SensorPort.setCurrentIndex(0)
 
         # Привязка кнопок
-        self.pBtn_ReadSensor.clicked.connect(self.read_sensor)
-        self.pBtn_GetData.clicked.connect(self.get_data)
+        self.pBtn_Show.clicked.connect(self.show_data)
+        self.pBtn_Save.clicked.connect(self.save_data)
+
+        # self.pBtn_Motor.clicked.connect(self.run_motor)
+        # self.pBtn_ReadSensor.clicked.connect(self.read_sensor)
+        # self.pBtn_GetData.clicked.connect(self.get_data)
+        self.pBtn_GetData.clicked.connect(self.read_data)
 
         self.pBtn_Outliers.clicked.connect(self.remove_outliers)
         self.pBtn_Integrate.clicked.connect(self.integrate_data)
         self.pBtn_Slope.clicked.connect(self.remove_slope)
         
-        self.pBtn_Motor.clicked.connect(self.run_motor)
-        self.pBtn_Show.clicked.connect(self.show_data)
-        self.pBtn_Save.clicked.connect(self.save_data)
+
                 
         # Блокировка кнопок во время операций
         self.update_buttons_state(True)
@@ -251,16 +254,16 @@ class MainUI(QMainWindow):
     
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
-        self.pBtn_ReadSensor.setEnabled(enabled)
+        self.pBtn_Show.setEnabled(enabled)
+        self.pBtn_Save.setEnabled(enabled)
+
+        # self.pBtn_Motor.setEnabled(enabled)
+        # self.pBtn_ReadSensor.setEnabled(enabled)
         self.pBtn_GetData.setEnabled(enabled)
 
         self.pBtn_Outliers.setEnabled(enabled)
         self.pBtn_Integrate.setEnabled(enabled)
         self.pBtn_Slope.setEnabled(enabled)
-        
-        self.pBtn_Motor.setEnabled(enabled)
-        self.pBtn_Show.setEnabled(enabled)
-        self.pBtn_Save.setEnabled(enabled)
                 
     def set_wait_cursor(self, waiting):
         """Установка курсора ожидания"""
@@ -269,37 +272,44 @@ class MainUI(QMainWindow):
         else:
             QApplication.restoreOverrideCursor()
     
-    def read_sensor(self):
-        """Чтение данных с датчика в отдельном потоке"""
-        port = self.cBox_SensorPort.currentText()
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порт датчика")
+    def read_data(self):
+        """Объединенная функция: запуск мотора, чтение датчика и получение данных"""
+        self.motor_port = self.cBox_MotorPort.currentText()
+        self.sensor_port = self.cBox_SensorPort.currentText()
+        
+        if not self.motor_port or not self.sensor_port:
+            QMessageBox.warning(self, "Ошибка", "Выберите порты мотора и датчика")
             return
         
         self.update_buttons_state(False)
         self.set_wait_cursor(True)
-        self.serial_worker = SerialWorker(port, 'R', 11)
-        self.serial_worker.finished.connect(self.on_read_finished)
+        self.show_status_message("Запуск процесса сбора данных...")
+        
+        # Последовательное выполнение операций с задержками
+        try:
+            self.motor_controller.run_motor(self.motor_port)
+        except Exception as e:
+            self.on_serial_error(f"Ошибка запуска мотора: {str(e)}")
+        QTimer.singleShot(500, lambda: self.read_sensor())  # Задержка полсекунды перед чтением датчика
+    
+    
+    def read_sensor(self):
+        """Чтение датчика после запуска мотора"""
+        self.serial_worker = SerialWorker(self.sensor_port, 'R', 11)
+        self.serial_worker.finished.connect(self.on_read_sensor_finished)
         self.serial_worker.error.connect(self.on_serial_error)
         self.serial_worker.start()
     
-    def on_read_finished(self):
-        """Обработка завершения чтения"""
-        self.update_buttons_state(True)
-        self.set_wait_cursor(False)
-        self.show_status_message('Датчик прочитан успешно! Теперь можно получить данные!')
-        print('Датчик прочитан успешно! Теперь можно получить данные!')
+    def on_read_sensor_finished(self):
+        """Обработка завершения чтения датчика"""
+        self.show_status_message("Датчик прочитан, получение данных...")
+        print("Датчик прочитан")
+        QTimer.singleShot(500, self.get_data)  # Задержка полсекунды перед получением данных
     
     def get_data(self):
-        """Получение данных в отдельном потоке"""
-        port = self.cBox_SensorPort.currentText()
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порт датчика")
-            return
-        
-        self.update_buttons_state(False)
-        self.set_wait_cursor(True)
-        self.serial_worker = SerialWorker(port, 'S', 47, 4194305)
+        """Получение данных после чтения датчика"""
+        # port = self.cBox_SensorPort.currentText()
+        self.serial_worker = SerialWorker(self.sensor_port, 'S', 47, 4194305)
         self.serial_worker.data_ready.connect(self.on_data_received)
         self.serial_worker.error.connect(self.on_serial_error)
         self.serial_worker.finished.connect(self.on_get_data_finished)
@@ -309,7 +319,6 @@ class MainUI(QMainWindow):
         """Обработка полученных данных"""
         try:
             self.df = self.data_processor.process_raw_data(raw_data)
-            # self.df = DataProcessor.apply_median_filter(df)
             self.df_processed = self.df.copy()  # Сохраняем копию для обработки
             self.show_status_message('Данные получены! Готово к интегрированию!')
             print('Данные получены! Готово к интегрированию!')
@@ -321,6 +330,7 @@ class MainUI(QMainWindow):
         """Обработка завершения получения данных"""
         self.update_buttons_state(True)
         self.set_wait_cursor(False)
+        self.show_status_message("Процесс сбора данных завершен!")
     
     def on_serial_error(self, error_msg):
         """Обработка ошибок последовательного порта"""
@@ -405,7 +415,7 @@ class MainUI(QMainWindow):
         """Отображение данных на графике"""
         if self.df_processed is None:
             QMessageBox.warning(self, "Ошибка", "Нет данных для отображения, загрузка тестовых данных")
-            self.df = pd.read_csv(os.path.join('data', 'data.csv'), index_col=0)
+            self.df = pd.read_csv(os.path.join('data', 'data2.csv'), index_col=0)
             self.df_processed = self.df.copy()  # Сохраняем копию для обработки
             return
         
