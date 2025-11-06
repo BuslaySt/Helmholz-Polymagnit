@@ -115,19 +115,6 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pBtn_Motor">
-          <property name="minimumSize">
-           <size>
-            <width>150</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Motor</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="pBtn_Show">
           <property name="minimumSize">
            <size>
@@ -171,19 +158,6 @@
       <item>
        <layout class="QHBoxLayout" name="hLayout_2_2">
         <item>
-         <widget class="QPushButton" name="pBtn_ReadSensor">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>1.1. Read sensor</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="pBtn_GetData">
           <property name="minimumSize">
            <size>
@@ -192,7 +166,7 @@
            </size>
           </property>
           <property name="text">
-           <string>1.2. Get data</string>
+           <string>1. Get data</string>
           </property>
          </widget>
         </item>
