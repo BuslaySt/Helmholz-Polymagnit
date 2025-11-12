@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>942</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>AMT&amp;C Helmholz Coils Magnet Measurements</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>AMTClogo-M.ico</normaloff>AMTClogo-M.ico</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow {
+    background-color: #f5f7fa;
+    color: #2c3e50;
+}</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="headerLayout">
+      <item>
+       <widget class="QLabel" name="logoLabel">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    border: 2px solid #3498db;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: white;
+    font-weight: bold;
+    color: #3498db;
+}</string>
+        </property>
+        <property name="text">
+         <string>LOGO</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="titleLabel">
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c3e50;
+    padding: 10px;
+}</string>
+        </property>
+        <property name="text">
+         <string>AMT&amp;C Helmholz Coils Magnet Measurements</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QFrame" name="separator">
+      <property name="styleSheet">
+       <string notr="true">QFrame {
+    color: #bdc3c7;
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::HLine</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="portsLayout">
+      <item>
+       <widget class="QLabel" name="motorLabel">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    font-weight: bold;
+}</string>
+        </property>
+        <property name="text">
+         <string>Motor Port:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cBox_MotorPort">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QComboBox {
+    border: 1px solid #bdc3c7;
+    border-radius: 3px;
+    padding: 5px;
+    background-color: white;
+}
+QComboBox:focus {
+    border-color: #3498db;
+}</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="sensorLabel">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    font-weight: bold;
+}</string>
+        </property>
+        <property name="text">
+         <string>Sensor Port:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cBox_SensorPort">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QComboBox {
+    border: 1px solid #bdc3c7;
+    border-radius: 3px;
+    padding: 5px;
+    background-color: white;
+}
+QComboBox:focus {
+    border-color: #3498db;
+}</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="refreshPortsBtn">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    background-color: #95a5a6;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+}
+QPushButton:hover {
+    background-color: #7f8c8d;
+}</string>
+        </property>
+        <property name="text">
+         <string>Refresh Ports</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="controlLayout">
+      <item>
+       <widget class="QPushButton" name="pBtn_GetData">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+}
+QPushButton:hover {
+    background-color: #2980b9;
+}
+QPushButton:disabled {
+    background-color: #bdc3c7;
+}</string>
+        </property>
+        <property name="text">
+         <string>Start Measurement Cycle</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="progressLabel">
+      <property name="styleSheet">
+       <string notr="true">QLabel {
+    font-weight: bold;
+    color: #7f8c8d;
+}</string>
+      </property>
+      <property name="text">
+       <string>Ready</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QProgressBar" name="progressBar">
+      <property name="styleSheet">
+       <string notr="true">QProgressBar {
+    border: 1px solid #bdc3c7;
+    border-radius: 3px;
+    text-align: center;
+    background-color: #ecf0f1;
+}
+QProgressBar::chunk {
+    background-color: #3498db;
+    border-radius: 2px;
+}</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="chartLayout"/>
+    </item>
+    <item>
+     <widget class="QFrame" name="resultsFrame">
+      <property name="styleSheet">
+       <string notr="true">QFrame {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="resultsTitle">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    font-weight: bold;
+    font-size: 14px;
+    color: #2c3e50;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement Results</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement1Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 2px;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 1: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement2Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 2px;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 2: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement3Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 2px;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 3: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="finalResultLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    font-weight: bold;
+    color: #27ae60;
+    padding: 5px;
+}</string>
+         </property>
+         <property name="text">
+          <string>Final Result: ---</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="styleSheet">
+    <string notr="true">QStatusBar {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+}</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
