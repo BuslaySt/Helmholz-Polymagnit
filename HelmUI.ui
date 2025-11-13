@@ -6,171 +6,489 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>853</width>
-    <height>752</height>
+    <width>1014</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>AMT&amp;C Helmholz Coils Magnet measurements</string>
+   <string>AMT&amp;C Helmholz Coils Magnet Measurements</string>
   </property>
   <property name="windowIcon">
    <iconset>
     <normaloff>AMTClogo-M.ico</normaloff>AMTClogo-M.ico</iconset>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #2c3e50, stop: 1 #34495e);
+    color: #ecf0f1;
+    font-family: &quot;Segoe UI&quot;, Arial, sans-serif;
+}</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="Layout_1h">
+     <layout class="QHBoxLayout" name="headerLayout">
       <item>
-       <spacer name="hSpacer_1">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QLabel" name="lbl_MotorPort">
+       <widget class="QLabel" name="logoLabel">
         <property name="minimumSize">
          <size>
-          <width>100</width>
-          <height>30</height>
+          <width>80</width>
+          <height>80</height>
          </size>
         </property>
+        <property name="maximumSize">
+         <size>
+          <width>80</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    border: 3px solid #3498db;
+    border-radius: 8px;
+    padding: 8px;
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #ffffff, stop: 1 #f8f9fa);
+    font-weight: bold;
+    color: #3498db;
+    font-size: 12px;
+}</string>
+        </property>
         <property name="text">
-         <string>Motor port</string>
+         <string>AMT&amp;C</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QComboBox" name="cBox_MotorPort">
-        <property name="minimumSize">
-         <size>
-          <width>100</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="lbl_SensorPort">
-        <property name="minimumSize">
-         <size>
-          <width>100</width>
-          <height>30</height>
-         </size>
+       <widget class="QLabel" name="titleLabel">
+        <property name="styleSheet">
+         <string notr="true">QLabel {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ecf0f1;
+    padding: 15px;
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 #3498db, stop: 1 #2980b9);
+    border-radius: 8px;
+    border: 1px solid #2471a3;
+}</string>
         </property>
         <property name="text">
-         <string>Sensor port</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <string>AMT&amp;C  |  Helmholz Coils Magnet Measurements System</string>
         </property>
        </widget>
       </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QFrame" name="separator">
+      <property name="styleSheet">
+       <string notr="true">QFrame {
+    background-color: #3498db;
+    border: 1px solid #2980b9;
+    border-radius: 1px;
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::HLine</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="controlLayout">
       <item>
-       <widget class="QComboBox" name="cBox_SensorPort">
+       <widget class="QPushButton" name="pBtn_GetData">
         <property name="minimumSize">
          <size>
-          <width>100</width>
-          <height>30</height>
+          <width>0</width>
+          <height>120</height>
          </size>
         </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="hSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #27ae60, stop: 1 #229954);
+    color: white;
+    font-weight: bold;
+    border: 3px solid #1e8449;
+    border-radius: 8px;
+    font-size: 16px;
+    padding: 12px;
+}
+QPushButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #229954, stop: 1 #1e8449);
+    border: 3px solid #186a3b;
+}
+QPushButton:pressed {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #1e8449, stop: 1 #186a3b);
+}
+QPushButton:disabled {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #95a5a6, stop: 1 #7f8c8d);
+    border: 3px solid #5d6d7e;
+}</string>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QVBoxLayout" name="Layout_2v">
-      <item>
-       <layout class="QHBoxLayout" name="hLayout_2_1">
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="hLayout_2_2">
-        <item>
-         <widget class="QPushButton" name="pBtn_GetData">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>80</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>1. Get data</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="Layout_3h"/>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="hLayout_2_3">
-      <item>
-       <widget class="QLabel" name="lbl_1">
         <property name="text">
-         <string>TextLabel</string>
+         <string>▶  START MEASUREMENT CYCLE</string>
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QFrame" name="portsFrame">
+        <property name="styleSheet">
+         <string notr="true">QFrame {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+    border: 2px solid #34495e;
+    border-radius: 8px;
+    padding: 15px;
+}</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="portsLayout">
+         <item>
+          <widget class="QLabel" name="motorLabel">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    font-weight: bold;
+    color: #ecf0f1;
+    font-size: 13px;
+    padding: 5px;
+}</string>
+           </property>
+           <property name="text">
+            <string>Motor Port:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cBox_MotorPort">
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QComboBox {
+    border: 2px solid #5d6d7e;
+    border-radius: 5px;
+    padding: 8px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    font-weight: bold;
+    selection-background-color: #3498db;
+}
+QComboBox:focus {
+    border-color: #3498db;
+}
+QComboBox::drop-down {
+    border: none;
+}
+QComboBox::down-arrow {
+    image: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #ecf0f1;
+    width: 0px;
+    height: 0px;
+}</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="sensorLabel">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    font-weight: bold;
+    color: #ecf0f1;
+    font-size: 13px;
+    padding: 5px;
+}</string>
+           </property>
+           <property name="text">
+            <string>Sensor Port:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cBox_SensorPort">
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QComboBox {
+    border: 2px solid #5d6d7e;
+    border-radius: 5px;
+    padding: 8px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    font-weight: bold;
+    selection-background-color: #3498db;
+}
+QComboBox:focus {
+    border-color: #3498db;
+}
+QComboBox::drop-down {
+    border: none;
+}
+QComboBox::down-arrow {
+    image: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #ecf0f1;
+    width: 0px;
+    height: 0px;
+}</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="refreshPortsBtn">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>150</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #5d6d7e, stop: 1 #4a5f78);
+    color: white;
+    font-weight: bold;
+    border: 2px solid #34495e;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 12px;
+}
+QPushButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #4a5f78, stop: 1 #3a4a5c);
+    border: 2px solid #2c3e50;
+}
+QPushButton:pressed {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+}</string>
+           </property>
+           <property name="text">
+            <string>Refresh Ports</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="progressLabel">
+      <property name="styleSheet">
+       <string notr="true">QLabel {
+    font-weight: bold;
+    color: #bdc3c7;
+    font-size: 13px;
+    padding: 5px;
+    background-color: rgba(44, 62, 80, 0.7);
+    border-radius: 5px;
+}</string>
+      </property>
+      <property name="text">
+       <string>SYSTEM READY</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QProgressBar" name="progressBar">
+      <property name="styleSheet">
+       <string notr="true">QProgressBar {
+    border: 2px solid #34495e;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    font-weight: bold;
+    height: 25px;
+}
+QProgressBar::chunk {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3498db, stop: 1 #2980b9);
+    border-radius: 4px;
+    border: 1px solid #2471a3;
+}</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="chartLayout" stretch=""/>
+    </item>
+    <item>
+     <widget class="QFrame" name="resultsFrame">
+      <property name="styleSheet">
+       <string notr="true">QFrame {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+    border: 3px solid #34495e;
+    border-radius: 10px;
+    padding: 20px;
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="resultsTitle">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    font-weight: bold;
+    font-size: 16px;
+    color: #ecf0f1;
+    padding: 8px;
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 #3498db, stop: 1 #2980b9);
+    border-radius: 5px;
+    border: 1px solid #2471a3;
+}</string>
+         </property>
+         <property name="text">
+          <string>📊  MEASUREMENT RESULTS</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement1Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 8px;
+    background-color: rgba(52, 73, 94, 0.6);
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    color: #ecf0f1;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 1: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement2Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 8px;
+    background-color: rgba(52, 73, 94, 0.6);
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    color: #ecf0f1;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 2: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="measurement3Label">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    padding: 8px;
+    background-color: rgba(52, 73, 94, 0.6);
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    color: #ecf0f1;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+         </property>
+         <property name="text">
+          <string>Measurement 3: ---</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="finalResultLabel">
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+    font-weight: bold;
+    color: #27ae60;
+    padding: 12px;
+    background-color: rgba(39, 174, 96, 0.1);
+    border-radius: 6px;
+    border: 2px solid #27ae60;
+    font-size: 14px;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+         </property>
+         <property name="text">
+          <string>Final Result: ---</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusBar"/>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>853</width>
-     <height>21</height>
-    </rect>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="styleSheet">
+    <string notr="true">QStatusBar {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 #2c3e50, stop: 1 #34495e);
+    color: #bdc3c7;
+    border-top: 2px solid #3498db;
+    font-weight: bold;
+}</string>
    </property>
-   <widget class="QMenu" name="menuMenu">
-    <property name="title">
-     <string>Menu</string>
-    </property>
-   </widget>
-   <addaction name="menuMenu"/>
   </widget>
  </widget>
  <resources/>
