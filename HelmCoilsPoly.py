@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
-from PyQt5.QtChart import QChart, QChartView, QLineSeries, QScatterSeries
+from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtGui import QPainter, QPixmap
 import sys, datetime
 import serial.tools.list_ports
 import time, os
@@ -33,7 +33,6 @@ class SerialWorker(QThread):
                     raw_data = serial_conn.read(self.read_size)
                     self.data_ready.emit(raw_data)
                 else:
-                    # Для операций только записи ждем завершения
                     time.sleep(self.timeout)
                     
             self.finished.emit()
@@ -46,10 +45,7 @@ class DataProcessor:
     
     @staticmethod
     def process_raw_data(raw_data: bytes) -> pd.DataFrame:
-        """Перевод байтовой строки в числа
-        data - поток данных
-        encoder - измерения энкодера
-        """
+        """Перевод байтовой строки в числа"""
         data = []
         for num in range(0, 2097152, 2):
             hi_byte = raw_data[num]
@@ -76,20 +72,12 @@ class DataProcessor:
 
     @staticmethod
     def integrate_df(df_filtered: pd.DataFrame, step:int=25) -> pd.DataFrame:
-        """Полное интегрирование данных - основной метод
-        df_filtered - обработанные данные
-        step - шаг интегрирования - 10000 / 20 = 500 градусов
-        """
-        # Создание интервалов
+        """Полное интегрирование данных - основной метод"""
         bins = range(0, len(df_filtered) + step, step)
 
-        # Находим индексы, где происходит переход с 9999 на 0
-        split_points = df_filtered.index[(df_filtered['encoder'].shift(1) == 9999) & (df_filtered['encoder'] == 0)]
+        split_points = df_filtered.index[(df_filtered['encoder'].shift(1) - df_filtered['encoder'] > 1000)] # Сплитуем по переходу больше 1000
+        # split_points = [0] + split_points.tolist() + [len(df_filtered)]
 
-        # Добавляем начало и конец датасета
-        split_points = [0] + split_points.tolist() + [len(df_filtered)]
-
-        # Создаем список разделенных датафреймов с группировкой по encoder
         datasets = []
         for i in range(len(split_points) - 1):
             start_idx = split_points[i]
@@ -97,33 +85,27 @@ class DataProcessor:
             dataset_part = df_filtered.iloc[start_idx:end_idx].copy()
             dataset_part.encoder = dataset_part.encoder + 10000 * i
 
-            # Группировка по encoder и усреднение data
             dataset_part['bin'] = pd.cut(dataset_part['encoder'], bins=bins, right=False, labels=bins[:-1])
             grouped = dataset_part.groupby('bin', observed=True)['data'].sum()
             datasets.append(grouped)    
 
         df_encoder = pd.concat(datasets).reset_index()
-        df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5) # 2.5/32767*10**-5 - коэф. для перевода в Вольты*сек
+        df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5)
 
         x = df_encoder.integrated_data.index.values
         y = df_encoder.integrated_data.values
 
-        # Линейная регрессия для выделения тренда
-        coefficients = np.polyfit(x, y, 1)  # 1 - линейный тренд
+        coefficients = np.polyfit(x, y, 1)
         trend = np.polyval(coefficients, x)
 
-        # Детрендированные данные
-        df_encoder['data'] = y - trend
+        df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки
         df_encoder['deg'] = df_encoder.index/10000/step*360
 
         df = df_encoder.reindex(columns=['deg', 'data'])
         
-        # Локальные максимумы
         local_maxima = argrelextrema(df.data.values, np.greater, order=100)[0]
-        # Локальные минимумы
         local_minima = argrelextrema(df.data.values, np.less, order=100)[0]
 
-        # Добавляем метки в DataFrame
         df['is_local_max'] = False
         df['is_local_min'] = False
 
@@ -133,32 +115,24 @@ class DataProcessor:
         return df
 
     @staticmethod
-    def get_amplitude(df: pd.DataFrame) -> set:
+    def get_amplitude(df: pd.DataFrame) -> tuple:
         """Вычисление амплитуды"""
-        # Извлечение экстремумов
         maxima = df[df['is_local_max']]
         minima = df[df['is_local_min']]
 
-        # Вычисляем средние значения
         mean_max = maxima['data'].mean()
         mean_min = minima['data'].mean()
 
-        # Половина размаха разности средних - амплитуда сигнала
         amplitude = (mean_max - mean_min)/2
 
-        # Погрешность среднего значения максимумов
         std_max = maxima['data'].std(ddof=1)
         std_error_max = std_max / np.sqrt(len(maxima))
 
-        # Погрешность среднего значения минимумов
         std_min = minima['data'].std(ddof=1)
         std_error_min = std_min / np.sqrt(len(minima))
 
-        # Абсолютная погрешность амплитуды (по формуле погрешности разности)
         absolute_error = np.sqrt(std_error_max**2 + std_error_min**2) / 2
-
-        # Относительная погрешность амплитуды
-        relative_error = absolute_error / amplitude * 100  # в процентах
+        relative_error = absolute_error / amplitude * 100
 
         return (amplitude, absolute_error, relative_error)
 
@@ -179,78 +153,186 @@ class MotorController:
             print(f"Ошибка управления мотором: {e}")
             return 0
 
+class MeasurementManager:
+    """Менеджер управления измерениями"""
+    
+    def __init__(self):
+        self.measurements = []
+        self.current_measurement = 0
+        self.total_measurements = 3
+        self.current_measurement_data = None  # Данные текущего измерения
+    
+    def start_measurement_cycle(self):
+        """Начать цикл измерений"""
+        self.measurements = []
+        self.current_measurement = 0
+        self.current_measurement_data = None
+    
+    def add_measurement(self, amplitude, absolute_error, relative_error):
+        """Добавить результат измерения"""
+        self.measurements.append({
+            'amplitude': amplitude,
+            'absolute_error': absolute_error,
+            'relative_error': relative_error
+        })
+        self.current_measurement += 1
+    
+    def save_current_measurement_data(self, amplitude, absolute_error, relative_error):
+        """Сохранить данные текущего измерения (для возможного повтора)"""
+        self.current_measurement_data = {
+            'amplitude': amplitude,
+            'absolute_error': absolute_error,
+            'relative_error': relative_error
+        }
+    
+    def confirm_current_measurement(self):
+        """Подтвердить текущее измерение и перейти к следующему"""
+        if self.current_measurement_data:
+            self.measurements.append(self.current_measurement_data.copy())
+            self.current_measurement += 1
+            self.current_measurement_data = None
+    
+    def is_complete(self):
+        """Проверить завершение всех измерений"""
+        return self.current_measurement >= self.total_measurements
+    
+    def get_current_measurement_number(self):
+        """Получить номер текущего измерения"""
+        return self.current_measurement + 1
+    
+    def get_final_result(self):
+        """Получить финальный результат по формуле: sqrt(((m1)**2 + (m2)**2 + (m3)**2)/2)"""
+        if len(self.measurements) != 3:
+            return None
+        
+        # Извлекаем амплитуды из всех трех измерений
+        amplitudes = sorted([m['amplitude'] for m in self.measurements])
+        
+        # Вычисляем финальный результат по формуле
+        sum_of_squares = sum(amp**2 for amp in amplitudes) / 2
+        final_amplitude = np.sqrt(sum_of_squares)
+        
+        # Вычисляем погрешность финального результата
+        # Погрешность по формуле для функции f = sqrt(a^2 + b^2 + c^2)/2
+        absolute_errors = [m['absolute_error'] for m in self.measurements]
+        
+        # Частные производные: df/dai = (ai) / (2 * sqrt(a1^2 + a2^2 + a3^2))
+        denominator = 2 * np.sqrt(sum_of_squares)
+        partial_derivatives = [amp / denominator for amp in amplitudes]
+        
+        # Погрешность финального результата
+        final_absolute_error = np.sqrt(
+            sum((partial_derivatives[i] * absolute_errors[i])**2 for i in range(3))
+        )
+        
+        # Относительная погрешность
+        final_relative_error = final_absolute_error / final_amplitude * 100
+
+        # Угол отклонения от нормали (оси z)
+        M_xy = amplitudes[0]
+        M_yz = amplitudes[1]
+        M_zx = amplitudes[2]
+
+        theta_rad = np.arctan(M_xy / (np.sqrt(M_yz**2 + M_zx**2 - M_xy**2)/2))
+        theta_deg = np.degrees(theta_rad)
+        
+        print(theta_deg)
+
+        return (final_amplitude, final_absolute_error, final_relative_error, theta_deg)
+    
+    def get_individual_results(self):
+        """Получить результаты отдельных измерений"""
+        return self.measurements.copy()
 
 class MainUI(QMainWindow):
     def __init__(self):
         super(MainUI, self).__init__()
-        loadUi("HelmUI.ui", self)
+        
+        # Загрузка UI из файла
+        loadUi("HelmCoilsUI.ui", self)
         
         self.serial_worker = None
         self.df = None
-        self.df_processed = None  # Для хранения обработанных данных
         self.data_processor = DataProcessor()
         self.motor_controller = MotorController()
+        self.measurement_manager = MeasurementManager()
         
         self.init_ui()
         self.init_graph()
         
     def init_ui(self):
         """Инициализация интерфейса"""
-        # Заполнение списков портов
+        # Загрузка логотипа
+        self.load_logo()
+        
+        # Привязка сигналов
+        self.refreshPortsBtn.clicked.connect(self.refresh_ports)
+        self.pBtn_GetData.clicked.connect(self.start_measurement_cycle)
+        
+        # Список меток измерений для удобного доступа
+        self.measurement_labels = [
+            self.measurement1Label,
+            self.measurement2Label, 
+            self.measurement3Label
+        ]
+        
+        # Инициализация портов
+        self.refresh_ports()
+        
+        # Скрываем прогресс бар изначально
+        self.progressBar.setVisible(False)
+        
+        self.update_buttons_state(True)
+        self.show_status_message("Ready to work")
+
+    def load_logo(self):
+        """Загрузка логотипа"""
+        try:
+            logo_pixmap_1 = QPixmap("AMTClogo.png")
+            logo_pixmap_2 = QPixmap("AMTClogo-L.png")
+            if not logo_pixmap_1.isNull():
+                self.logoLabel.setPixmap(logo_pixmap_1.scaled(65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            if not logo_pixmap_2.isNull():
+                self.logoLabel_2.setPixmap(logo_pixmap_2.scaled(300, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        except Exception as e:
+            print(f"Не удалось загрузить логотип: {e}")
+
+    def refresh_ports(self):
+        """Обновление списка доступных портов"""
+        self.cBox_MotorPort.clear()
+        self.cBox_SensorPort.clear()
+        
         ports = serial.tools.list_ports.comports()
         for port in ports:
             self.cBox_MotorPort.addItem(port.device)
             self.cBox_SensorPort.addItem(port.device)
-        self.cBox_MotorPort.setCurrentIndex(1)
-        self.cBox_SensorPort.setCurrentIndex(0)
-
-        # Привязка кнопок
-        self.pBtn_GetData.clicked.connect(self.read_data)
-
-        # Блокировка кнопок во время операций
-        self.update_buttons_state(True)
-
-        # Инициализация статус бара
-        self.show_status_message("Готов к работе")
-
-    def show_status_message(self, message, timeout=5000):
-        """Показать сообщение в статус баре"""
-        self.statusBar.showMessage(message, timeout)
+        
+        if self.cBox_MotorPort.count() > 1:
+            self.cBox_MotorPort.setCurrentIndex(1)
+        if self.cBox_SensorPort.count() > 0:
+            self.cBox_SensorPort.setCurrentIndex(0)
 
     def init_graph(self):
         """Инициализация графика"""
         self.chart = QChart()
-        # self.chart.setTitle("Числовые данные")
+        self.chart.setTheme(QChart.ChartThemeBlueIcy)
         self.chart.legend().setVisible(False)
         
         self.series = QLineSeries()
         self.chart.addSeries(self.series)
         self.chart.createDefaultAxes()
         
-        self.chart.axisX().setLabelFormat("%d")
-        # axis_x = self.chart.axisX()
-        # axis_x.setTitleText("Сигнал")
-        # axis_x.setLabelFormat("%d")
-        
-        self.chart.axisY().setLabelFormat("%d")
-        # axis_y = self.chart.axisY()
-        # axis_y.setTitleText("Индекс")
-        # axis_y.setLabelFormat("%d")
+        self.chart.axisX().setLabelFormat("%.1f")
+        self.chart.axisY().setLabelFormat("%.2e")
         
         self.chart_view = QChartView(self.chart)
-        # self.chart_view.setRenderHint(QPainter.Antialiasing)
-        self.Layout_3h.addWidget(self.chart_view)
-    
+        self.chart_view.setRenderHint(QPainter.Antialiasing)
+        self.chartLayout.addWidget(self.chart_view)
+   
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
-        # self.pBtn_Show.setEnabled(enabled)
-        # self.pBtn_Save.setEnabled(enabled)
-
         self.pBtn_GetData.setEnabled(enabled)
-
-        # self.pBtn_Outliers.setEnabled(False)
-        # self.pBtn_Integrate.setEnabled(False)
-        # self.pBtn_Slope.setEnabled(False)
+        self.refreshPortsBtn.setEnabled(enabled)
                 
     def set_wait_cursor(self, waiting):
         """Установка курсора ожидания"""
@@ -259,25 +341,45 @@ class MainUI(QMainWindow):
         else:
             QApplication.restoreOverrideCursor()
     
-    def read_data(self):
-        """Запуск мотора и чтение датчиков"""
+    def start_measurement_cycle(self):
+        """Начать цикл из 3 измерений"""
         self.motor_port = self.cBox_MotorPort.currentText()
         self.sensor_port = self.cBox_SensorPort.currentText()
         
         if not self.motor_port or not self.sensor_port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порты мотора и датчика")
+            QMessageBox.warning(self, "Error", "Select motor and sensor ports")
             return
         
+        self.measurement_manager.start_measurement_cycle()
         self.update_buttons_state(False)
         self.set_wait_cursor(True)
-        self.show_status_message("Запуск процесса сбора данных...")
+        self.pBtn_GetData.setVisible(False)
+        self.portsFrame.setVisible(False)
+        self.progressBar.setVisible(True)
+        self.progressBar.setMaximum(3)
+        self.progressBar.setValue(0)
         
-        # Последовательное выполнение операций с задержками
+        # Сброс результатов
+        for label in self.measurement_labels:
+            label.setText("---")
+        self.finalResultLabel.setText("Final Result: ---")
+        
+        self.show_status_message("Starting measurement cycle...")
+        self.start_single_measurement()
+    
+    def start_single_measurement(self):
+        """Запуск одиночного измерения"""
+        current_meas = self.measurement_manager.get_current_measurement_number()
+        self.progressLabel.setText(f"Measurement {current_meas}/3 in progress...")
+        self.progressBar.setValue(current_meas - 1)
+        
         try:
             self.motor_controller.run_motor(self.motor_port)
         except Exception as e:
-            self.on_serial_error(f"Ошибка запуска мотора: {str(e)}")
-        QTimer.singleShot(500, lambda: self.read_sensor())  # Задержка полсекунды перед чтением датчика
+            self.on_serial_error(f"Motor start error: {str(e)}")
+            return
+        
+        QTimer.singleShot(500, self.read_sensor)
     
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
@@ -288,13 +390,11 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
-        self.show_status_message("Датчик прочитан, получение данных...")
-        print("Датчик прочитан")
-        QTimer.singleShot(500, self.get_data)  # Задержка полсекунды перед получением данных
+        self.show_status_message("Sensor read, getting data... You can rotate the magnet", timeout=60000)
+        QTimer.singleShot(500, self.get_data)
     
     def get_data(self):
         """Получение данных после чтения датчика"""
-        # port = self.cBox_SensorPort.currentText()
         self.serial_worker = SerialWorker(self.sensor_port, 'S', 47, 4194305)
         self.serial_worker.data_ready.connect(self.on_data_received)
         self.serial_worker.error.connect(self.on_serial_error)
@@ -304,101 +404,150 @@ class MainUI(QMainWindow):
     def on_data_received(self, raw_data):
         """Обработка полученных данных"""
         try:
-            df_raw = self.data_processor.process_raw_data(raw_data) # Получаем датафрейм с датчика
-            df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3) # Убираем выбросы
-            self.df = self.data_processor.integrate_df(df_filtered) # Интегрируем данные и ищем локальные максимумы
+            df_raw = self.data_processor.process_raw_data(raw_data)
+            df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
+            self.df = self.data_processor.integrate_df(df_filtered)
 
-            self.update_graph(self.df)  # Обновляем график после получения данных
+            self.update_graph(self.df)
 
             amplitude, absolute_error, relative_error = self.data_processor.get_amplitude(self.df)
-            self.show_status_message(f"Полная амплитуда: {amplitude:.5f} ± {absolute_error:.5f} ({relative_error:.2f}%)", 200000)
-
-            self.lbl_1.setText(f"Полная амплитуда: {amplitude:.5f} ± {absolute_error:.5f} ({relative_error:.2f}%)")
-
-            self.show_status_message('Данные получены!')
+            
+            # Сохраняем данные текущего измерения (для возможного повтора)
+            self.measurement_manager.save_current_measurement_data(amplitude, absolute_error, relative_error)
+            
+            # Обновляем интерфейс с результатом текущего измерения
+            current_idx = self.measurement_manager.current_measurement
+            if current_idx < len(self.measurement_labels):
+                self.measurement_labels[current_idx].setText(
+                    f"Measurement {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [V*s*m]"
+                )
+            
+            self.show_status_message(f'Measurement {current_idx + 1}/3 completed!')
 
         except Exception as e:
-            self.on_serial_error(f"Ошибка обработки данных: {str(e)}")
+            self.on_serial_error(f"Data processing error: {str(e)}")
     
     def on_get_data_finished(self):
         """Обработка завершения получения данных"""
+        # После завершения измерения спрашиваем пользователя
+        self.ask_measurement_action()
+    
+    def ask_measurement_action(self):
+        """Спросить пользователя о дальнейших действиях"""
+        current_meas_num = self.measurement_manager.get_current_measurement_number()
+        
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Measurement Complete")
+        msg.setText(f"Measurement {current_meas_num}/3 completed successfully!\n\nWhat would you like to do?")
+        msg.setIcon(QMessageBox.Question)
+        
+        # Добавляем кнопки
+        if current_meas_num < 3:
+            next_btn = msg.addButton("Next Measurement", QMessageBox.AcceptRole)
+        else:
+            next_btn = msg.addButton("Finish Measurements", QMessageBox.AcceptRole)
+        repeat_btn = msg.addButton("Repeat Measurement", QMessageBox.ActionRole)
+        cancel_btn = msg.addButton("Cancel Cycle", QMessageBox.RejectRole)
+
+        self.set_wait_cursor(False)
+        msg.setDefaultButton(next_btn)
+        
+        msg.exec_()
+        
+        self.set_wait_cursor(True)
+
+        clicked_button = msg.clickedButton()
+        if clicked_button == next_btn:
+            # Подтвердить текущее измерение и перейти к следующему
+            self.measurement_manager.confirm_current_measurement()
+            
+            if self.measurement_manager.is_complete():
+                # Все измерения завершены
+                self.measurement_cycle_complete()
+            else:
+                # Перейти к следующему измерению
+                self.show_status_message(f"Starting next measurement...")
+                QTimer.singleShot(1000, self.start_single_measurement)
+
+        elif clicked_button == repeat_btn:
+            # Повторить измерение
+            self.show_status_message(f"Repeating measurement {current_meas_num}...")
+            QTimer.singleShot(1000, self.start_single_measurement)
+                
+        elif clicked_button == cancel_btn:
+            # Отменить цикл измерений
+            self.measurement_cycle_complete(aborted=True)
+    
+    def measurement_cycle_complete(self, aborted=False):
+        """Завершение цикла измерений"""
         self.update_buttons_state(True)
         self.set_wait_cursor(False)
-        self.show_status_message("Процесс сбора данных завершен!")
+        self.progressBar.setVisible(False)
+        
+        self.pBtn_GetData.setVisible(True)
+        self.portsFrame.setVisible(True)
+
+        if aborted:
+            self.progressLabel.setText("Measurement cycle aborted")
+            self.show_status_message("Measurement cycle aborted by user")
+        else:
+            self.progressLabel.setText("Measurement cycle completed")
+            
+            # Показываем финальный результат по новой формуле
+            final_results = self.measurement_manager.get_final_result()
+            if final_results:
+                amplitude, absolute_error, relative_error, theta_deg = final_results
+                self.finalResultLabel.setText(
+                    f"Total Moment: {amplitude:.5} ± {absolute_error:.2} [V*s*m]; Deviation θz: {theta_deg:.4f}°"
+                )
+                
+                # Показываем детали расчетов
+                individual_results = self.measurement_manager.get_individual_results()
+                details = "Calculation details:\n"
+                for i, result in enumerate(individual_results, 1):
+                    details += f"M{i} = {result['amplitude']:.5f}\n"
+                details += f"Final = √({individual_results[0]['amplitude']:.5f}² + {individual_results[1]['amplitude']:.5f}² + {individual_results[2]['amplitude']:.5f}²) / 2"
+                details += f"Deviation Angle from Z-axis θz = {theta_deg}°"
+                
+                self.show_status_message(f"Measurement cycle completed! Total Moment: {amplitude:.5f}; Deviation θz: {theta_deg:.4f}°")
+                
+                # Показываем диалог с деталями расчета
+                # QMessageBox.information(self, "Measurement Complete", 
+                #                       f"Measurement cycle completed successfully!\n\n"
+                #                       f"{details}\n\n"
+                #                       f"Final result: {amplitude:.5f} ± {absolute_error:.5f} ({relative_error:.2f}%)")
     
     def on_serial_error(self, error_msg):
         """Обработка ошибок последовательного порта"""
         self.update_buttons_state(True)
         self.set_wait_cursor(False)
-        QMessageBox.critical(self, "Ошибка", error_msg)
-        print(f"Ошибка: {error_msg}")
+        self.progressBar.setVisible(False)
+        QMessageBox.critical(self, "Error", error_msg)
+        print(f"Error: {error_msg}")
 
     def update_graph(self, df):
         """Обновление графика текущими данными"""
-        
-        # Обновляем график
         self.chart.removeAllSeries()
-
-        # Создаем новую серию
         data_series = QLineSeries()
-        # Метки максимумов
-        # max_series = QScatterSeries()
-        # max_series.setColor(QColor(255, 0, 0))  # Красный цвет
-        # max_series.setMarkerSize(8)  # Размер маркера
-        # # Метки минимумов
-        # min_series = QScatterSeries()
-        # min_series.setColor(QColor(0, 0, 255))  # Синий цвет
-        # min_series.setMarkerSize(8)  # Размер маркера
         
-        # Добавляем точки данных
         for row in df.itertuples():
             data_series.append(row.deg, row.data)
-            # if row.is_local_max:
-            #     max_series.append(row.deg, row.data)
-            # if row.is_local_min:
-            #     min_series.append(row.deg, row.data)
         
         self.chart.addSeries(data_series)
-        # self.chart.addSeries(max_series)
-        # self.chart.addSeries(min_series)
         self.chart.createDefaultAxes()
-        self.chart.axisX().setLabelFormat("%d")
-        self.chart.axisY().setLabelFormat("%d")
+        self.chart.axisX().setLabelFormat("%.1f")
+        self.chart.axisY().setLabelFormat("%.2e")
     
-    def run_motor(self):
-        """Запуск мотора на определенное количество оборотов"""
-        port = self.cBox_MotorPort.currentText()
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите порт мотора")
-            return
-        
-        # Запускаем в отдельном потоке, чтобы не блокировать UI
-        QTimer.singleShot(0, lambda: self.motor_controller.run_motor(port))
-    
-    # def save_data(self):
-        """Сохранение данных в файл"""
-        if self.df_processed is None:
-            QMessageBox.warning(self, "Ошибка", "Нет данных для сохранения")
-            return
-        
-        try:
-            datadir = 'data'
-            filename = f"data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-            
-            self.df_processed.to_csv(os.path.join(datadir, filename))
-            
-            self.show_status_message(f'Данные сохранены в файл: {filename}')
-            print(f'Данные сохранены в файл: {filename}')
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения данных: {str(e)}")
+    def show_status_message(self, message, timeout=5000):
+        """Показать сообщение в статус баре"""
+        self.statusBar.showMessage(message, timeout)
 
 if __name__ == '__main__':
     app = QApplication([])
     
-    # Установка обработчика неперехваченных исключений
     def exception_handler(exctype, value, traceback):
-        print(f"Необработанное исключение: {exctype.__name__}: {value}")
-        QMessageBox.critical(None, "Ошибка", f"Произошла ошибка:\n{value}")
+        print(f"Unhandled exception: {exctype.__name__}: {value}")
+        QMessageBox.critical(None, "Error", f"An error occurred:\n{value}")
     
     sys.excepthook = exception_handler
     
