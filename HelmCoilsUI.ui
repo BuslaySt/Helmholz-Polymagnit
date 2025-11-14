@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1014</width>
-    <height>900</height>
+    <width>951</width>
+    <height>899</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -164,8 +164,14 @@ QPushButton:disabled {
           <widget class="QLabel" name="motorLabel">
            <property name="minimumSize">
             <size>
-             <width>100</width>
-             <height>35</height>
+             <width>130</width>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>68</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -189,7 +195,13 @@ QPushButton:disabled {
            <property name="minimumSize">
             <size>
              <width>150</width>
-             <height>35</height>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>68</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -223,8 +235,14 @@ QComboBox::down-arrow {
           <widget class="QLabel" name="sensorLabel">
            <property name="minimumSize">
             <size>
-             <width>100</width>
-             <height>35</height>
+             <width>120</width>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>68</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -248,7 +266,13 @@ QComboBox::down-arrow {
            <property name="minimumSize">
             <size>
              <width>150</width>
-             <height>35</height>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>68</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -283,13 +307,13 @@ QComboBox::down-arrow {
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>35</height>
+             <height>68</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>150</width>
-             <height>35</height>
+             <height>68</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -533,7 +557,7 @@ QProgressBar::chunk {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1014</width>
+     <width>951</width>
      <height>21</height>
     </rect>
    </property>
