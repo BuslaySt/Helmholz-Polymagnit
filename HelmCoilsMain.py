@@ -236,8 +236,6 @@ class MeasurementManager:
         theta_rad = np.arctan(M_xy / (np.sqrt(M_yz**2 + M_zx**2 - M_xy**2)/2))
         theta_deg = np.degrees(theta_rad)
         
-        print(theta_deg)
-
         return (final_amplitude, final_absolute_error, final_relative_error, theta_deg)
     
     def get_individual_results(self):
@@ -498,9 +496,9 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
                 self.finalResultLabel.setText(
-                    f"Полный момент: {amplitude:.5} [В*с*м]; Отклонение от нормали θz: {theta_deg:.4f}°"
+                    f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
-                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.5f} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.4f}°")
+                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.3f}°")
                 
     
     def on_serial_error(self, error_msg):
