@@ -78,7 +78,7 @@
 }</string>
         </property>
         <property name="text">
-         <string>AMT&amp;C  |  Helmholz Coils Magnet Measurements System</string>
+         <string>AMT&amp;C  |  Стенд измерения магнитного момента</string>
         </property>
        </widget>
       </item>
@@ -138,7 +138,7 @@ QPushButton:disabled {
 }</string>
         </property>
         <property name="text">
-         <string>▶  START MEASUREMENT CYCLE</string>
+         <string>▶  Начать измерения</string>
         </property>
        </widget>
       </item>
@@ -177,7 +177,7 @@ QPushButton:disabled {
 }</string>
            </property>
            <property name="text">
-            <string>Motor Port:</string>
+            <string>Порт двигателя:</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -236,7 +236,7 @@ QComboBox::down-arrow {
 }</string>
            </property>
            <property name="text">
-            <string>Sensor Port:</string>
+            <string>Порт датчика:</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -314,7 +314,7 @@ QPushButton:pressed {
 }</string>
            </property>
            <property name="text">
-            <string>Refresh Ports</string>
+            <string>Обновить</string>
            </property>
           </widget>
          </item>
@@ -402,7 +402,7 @@ QProgressBar::chunk {
 }</string>
            </property>
            <property name="text">
-            <string>📊  MEASUREMENT RESULTS</string>
+            <string>📊  Результаты измерений</string>
            </property>
           </widget>
          </item>
@@ -419,7 +419,7 @@ QProgressBar::chunk {
 }</string>
            </property>
            <property name="text">
-            <string>Measurement 1: ---</string>
+            <string>Измерение 1: ---</string>
            </property>
           </widget>
          </item>
@@ -436,7 +436,7 @@ QProgressBar::chunk {
 }</string>
            </property>
            <property name="text">
-            <string>Measurement 2: ---</string>
+            <string>Измерение 2: ---</string>
            </property>
           </widget>
          </item>
@@ -453,7 +453,7 @@ QProgressBar::chunk {
 }</string>
            </property>
            <property name="text">
-            <string>Measurement 3: ---</string>
+            <string>Измерение 3: ---</string>
            </property>
           </widget>
          </item>
@@ -472,7 +472,7 @@ QProgressBar::chunk {
 }</string>
            </property>
            <property name="text">
-            <string>Final Result: ---</string>
+            <string>Итоговый результат: ---</string>
            </property>
           </widget>
          </item>
@@ -528,6 +528,34 @@ QProgressBar::chunk {
 }</string>
    </property>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1014</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Измерения</string>
+    </property>
+    <addaction name="action"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>Настройки</string>
+    </property>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menu_2"/>
+  </widget>
+  <action name="action">
+   <property name="text">
+    <string>Сохранить данные в файл</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
