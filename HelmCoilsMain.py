@@ -201,7 +201,7 @@ class MeasurementManager:
         return self.current_measurement + 1
     
     def get_final_result(self):
-        """Получить финальный результат по формуле: sqrt(((m1)**2 + (m2)**2 + (m3)**2)/2)"""
+        """Получить финальный результат измерений"""
         if len(self.measurements) != 3:
             return None
         
@@ -283,7 +283,7 @@ class MainUI(QMainWindow):
         self.progressBar.setVisible(False)
         
         self.update_buttons_state(True)
-        self.show_status_message("Ready to work")
+        self.show_status_message("Готов к работе")
 
     def load_logo(self):
         """Загрузка логотипа"""
@@ -347,7 +347,7 @@ class MainUI(QMainWindow):
         self.sensor_port = self.cBox_SensorPort.currentText()
         
         if not self.motor_port or not self.sensor_port:
-            QMessageBox.warning(self, "Error", "Select motor and sensor ports")
+            QMessageBox.warning(self, "Error", "Выберите порты двигателя и датчика")
             return
         
         self.measurement_manager.start_measurement_cycle()
@@ -362,15 +362,15 @@ class MainUI(QMainWindow):
         # Сброс результатов
         for label in self.measurement_labels:
             label.setText("---")
-        self.finalResultLabel.setText("Final Result: ---")
+        self.finalResultLabel.setText("Результат: ---")
         
-        self.show_status_message("Starting measurement cycle...")
+        self.show_status_message("Начинаем цикл измерений...")
         self.start_single_measurement()
     
     def start_single_measurement(self):
         """Запуск одиночного измерения"""
         current_meas = self.measurement_manager.get_current_measurement_number()
-        self.progressLabel.setText(f"Measurement {current_meas}/3 in progress...")
+        self.progressLabel.setText(f"Измерение {current_meas}/3 в процессе...")
         self.progressBar.setValue(current_meas - 1)
         
         try:
@@ -390,7 +390,7 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
-        self.show_status_message("Sensor read, getting data... You can rotate the magnet", timeout=60000)
+        self.show_status_message("Датчик прочитал, получаем данные... Можно перевернуть изделие", timeout=60000)
         QTimer.singleShot(500, self.get_data)
     
     def get_data(self):
@@ -419,13 +419,13 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Measurement {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [V*s*m]"
+                    f"Измерение {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [V*s*m]"
                 )
             
-            self.show_status_message(f'Measurement {current_idx + 1}/3 completed!')
+            self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
 
         except Exception as e:
-            self.on_serial_error(f"Data processing error: {str(e)}")
+            self.on_serial_error(f"Ошибка обработки данных: {str(e)}")
     
     def on_get_data_finished(self):
         """Обработка завершения получения данных"""
@@ -443,11 +443,11 @@ class MainUI(QMainWindow):
         
         # Добавляем кнопки
         if current_meas_num < 3:
-            next_btn = msg.addButton("Next Measurement", QMessageBox.AcceptRole)
+            next_btn = msg.addButton("Следующее", QMessageBox.AcceptRole)
         else:
-            next_btn = msg.addButton("Finish Measurements", QMessageBox.AcceptRole)
-        repeat_btn = msg.addButton("Repeat Measurement", QMessageBox.ActionRole)
-        cancel_btn = msg.addButton("Cancel Cycle", QMessageBox.RejectRole)
+            next_btn = msg.addButton("Завершить", QMessageBox.AcceptRole)
+        repeat_btn = msg.addButton("Повторить", QMessageBox.ActionRole)
+        cancel_btn = msg.addButton("Отмена", QMessageBox.RejectRole)
 
         self.set_wait_cursor(False)
         msg.setDefaultButton(next_btn)
@@ -466,12 +466,12 @@ class MainUI(QMainWindow):
                 self.measurement_cycle_complete()
             else:
                 # Перейти к следующему измерению
-                self.show_status_message(f"Starting next measurement...")
+                self.show_status_message(f"Следующее измерение...")
                 QTimer.singleShot(1000, self.start_single_measurement)
 
         elif clicked_button == repeat_btn:
             # Повторить измерение
-            self.show_status_message(f"Repeating measurement {current_meas_num}...")
+            self.show_status_message(f"Повтор измерения {current_meas_num}...")
             QTimer.singleShot(1000, self.start_single_measurement)
                 
         elif clicked_button == cancel_btn:
@@ -498,7 +498,7 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
                 self.finalResultLabel.setText(
-                    f"Total Moment: {amplitude:.5} ± {absolute_error:.2} [V*s*m]; Deviation θz: {theta_deg:.4f}°"
+                    f"Total Moment: {amplitude:.5} [V*s*m]; Deviation θz: {theta_deg:.4f}°"
                 )
                 
                 # Показываем детали расчетов
@@ -509,7 +509,7 @@ class MainUI(QMainWindow):
                 details += f"Final = √({individual_results[0]['amplitude']:.5f}² + {individual_results[1]['amplitude']:.5f}² + {individual_results[2]['amplitude']:.5f}²) / 2"
                 details += f"Deviation Angle from Z-axis θz = {theta_deg}°"
                 
-                self.show_status_message(f"Measurement cycle completed! Total Moment: {amplitude:.5f}; Deviation θz: {theta_deg:.4f}°")
+                self.show_status_message(f"Measurement cycle completed! Total Moment: {amplitude:.5f} ± {absolute_error:.2}; Deviation θz: {theta_deg:.4f}°")
                 
                 # Показываем диалог с деталями расчета
                 # QMessageBox.information(self, "Measurement Complete", 
