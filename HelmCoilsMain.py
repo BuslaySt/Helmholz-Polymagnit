@@ -390,7 +390,7 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
-        self.show_status_message("Датчик прочитал, получаем данные... Можно перевернуть изделие", timeout=60000)
+        self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть изделие", timeout=60000)
         QTimer.singleShot(500, self.get_data)
     
     def get_data(self):
@@ -419,7 +419,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [V*s*m]"
+                    f"Измерение {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [В*с*м]"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -437,8 +437,8 @@ class MainUI(QMainWindow):
         current_meas_num = self.measurement_manager.get_current_measurement_number()
         
         msg = QMessageBox(self)
-        msg.setWindowTitle("Measurement Complete")
-        msg.setText(f"Measurement {current_meas_num}/3 completed successfully!\n\nWhat would you like to do?")
+        msg.setWindowTitle("Измерение завершено")
+        msg.setText(f"Измерение {current_meas_num}/3 успешно завершено!\n\nЧто делать дальше?")
         msg.setIcon(QMessageBox.Question)
         
         # Добавляем кнопки
@@ -467,12 +467,12 @@ class MainUI(QMainWindow):
             else:
                 # Перейти к следующему измерению
                 self.show_status_message(f"Следующее измерение...")
-                QTimer.singleShot(1000, self.start_single_measurement)
+                QTimer.singleShot(500, self.start_single_measurement)
 
         elif clicked_button == repeat_btn:
             # Повторить измерение
             self.show_status_message(f"Повтор измерения {current_meas_num}...")
-            QTimer.singleShot(1000, self.start_single_measurement)
+            QTimer.singleShot(500, self.start_single_measurement)
                 
         elif clicked_button == cancel_btn:
             # Отменить цикл измерений
@@ -488,34 +488,20 @@ class MainUI(QMainWindow):
         self.portsFrame.setVisible(True)
 
         if aborted:
-            self.progressLabel.setText("Measurement cycle aborted")
-            self.show_status_message("Measurement cycle aborted by user")
+            self.progressLabel.setText("Цикл измерений остановлен")
+            self.show_status_message("Цикл измерений остановлен пользователем")
         else:
-            self.progressLabel.setText("Measurement cycle completed")
+            self.progressLabel.setText("Цикл измерений завершён")
             
             # Показываем финальный результат по новой формуле
             final_results = self.measurement_manager.get_final_result()
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
                 self.finalResultLabel.setText(
-                    f"Total Moment: {amplitude:.5} [V*s*m]; Deviation θz: {theta_deg:.4f}°"
+                    f"Полный момент: {amplitude:.5} [В*с*м]; Отклонение от нормали θz: {theta_deg:.4f}°"
                 )
+                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.5f} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.4f}°")
                 
-                # Показываем детали расчетов
-                individual_results = self.measurement_manager.get_individual_results()
-                details = "Calculation details:\n"
-                for i, result in enumerate(individual_results, 1):
-                    details += f"M{i} = {result['amplitude']:.5f}\n"
-                details += f"Final = √({individual_results[0]['amplitude']:.5f}² + {individual_results[1]['amplitude']:.5f}² + {individual_results[2]['amplitude']:.5f}²) / 2"
-                details += f"Deviation Angle from Z-axis θz = {theta_deg}°"
-                
-                self.show_status_message(f"Measurement cycle completed! Total Moment: {amplitude:.5f} ± {absolute_error:.2}; Deviation θz: {theta_deg:.4f}°")
-                
-                # Показываем диалог с деталями расчета
-                # QMessageBox.information(self, "Measurement Complete", 
-                #                       f"Measurement cycle completed successfully!\n\n"
-                #                       f"{details}\n\n"
-                #                       f"Final result: {amplitude:.5f} ± {absolute_error:.5f} ({relative_error:.2f}%)")
     
     def on_serial_error(self, error_msg):
         """Обработка ошибок последовательного порта"""
