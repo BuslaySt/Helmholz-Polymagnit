@@ -489,8 +489,8 @@ QProgressBar::chunk {
         </property>
         <property name="maximumSize">
          <size>
-          <width>80</width>
-          <height>80</height>
+          <width>300</width>
+          <height>90</height>
          </size>
         </property>
         <property name="styleSheet">
