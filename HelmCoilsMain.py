@@ -3,12 +3,11 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QPainter, QPixmap
-import sys, datetime
+import sys, time, os, datetime
 import serial.tools.list_ports
-import time, os
 import pandas as pd
-from scipy.signal import argrelextrema, medfilt
 import numpy as np
+from scipy.signal import argrelextrema, medfilt
 
 class SerialWorker(QThread):
     """Поток для выполнения операций с последовательным портом"""
