@@ -435,16 +435,16 @@ class MainUI(QMainWindow):
         
         msg = QMessageBox(self)
         msg.setWindowTitle("Измерение завершено")
-        msg.setText(f"Измерение {current_meas_num}/3 успешно завершено!\n\nЧто делать дальше?")
+        msg.setText(f"Измерение {current_meas_num}/3 завершено!\n\nПоверните изделие в следующее положение или повторить измерение?")
         msg.setIcon(QMessageBox.Question)
         
         # Добавляем кнопки
         if current_meas_num < 3:
-            next_btn = msg.addButton("Следующее", QMessageBox.AcceptRole)
+            next_btn = msg.addButton("Следующее положение", QMessageBox.AcceptRole)
         else:
             next_btn = msg.addButton("Завершить", QMessageBox.AcceptRole)
         repeat_btn = msg.addButton("Повторить", QMessageBox.ActionRole)
-        cancel_btn = msg.addButton("Отмена", QMessageBox.RejectRole)
+        cancel_btn = msg.addButton("Отмена цикла", QMessageBox.RejectRole)
 
         self.set_wait_cursor(False)
         msg.setDefaultButton(next_btn)
