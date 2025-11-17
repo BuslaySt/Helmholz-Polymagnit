@@ -448,7 +448,17 @@ class MainUI(QMainWindow):
 
         self.set_wait_cursor(False)
         msg.setDefaultButton(next_btn)
-        
+
+        # Увеличить высоту кнопок
+        button_style = """
+        QPushButton {
+            min-height: 40px;
+            height: 40px;
+            font-size: 12pt;
+            padding: 10px;
+        }
+        """
+
         msg.exec_()
         
         self.set_wait_cursor(True)
