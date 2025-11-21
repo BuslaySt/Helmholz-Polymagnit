@@ -111,6 +111,9 @@
           <height>100</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="styleSheet">
          <string notr="true">QPushButton {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -328,6 +331,9 @@ QComboBox::down-arrow {
              <height>70</height>
             </size>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="styleSheet">
             <string notr="true">QPushButton {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -468,6 +474,9 @@ QProgressBar::chunk {
          </item>
          <item>
           <widget class="QLabel" name="lbl_measurement1">
+           <property name="cursor">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
            <property name="styleSheet">
             <string notr="true">QLabel {
     padding: 8px;
@@ -481,27 +490,16 @@ QProgressBar::chunk {
            <property name="text">
             <string>Измерение 1: ---</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="lbl_measurement2">
-           <property name="styleSheet">
-            <string notr="true">QLabel {
-    padding: 8px;
-    background-color: rgba(52, 73, 94, 0.6);
-    border-radius: 4px;
-    border-left: 4px solid #3498db;
-    color: #ecf0f1;
-    font-family: &quot;Courier New&quot;, monospace;
-}</string>
-           </property>
-           <property name="text">
-            <string>Измерение 2: ---</string>
+           <property name="textInteractionFlags">
+            <set>Qt::TextSelectableByMouse</set>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QLabel" name="lbl_measurement3">
+           <property name="cursor">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
            <property name="styleSheet">
             <string notr="true">QLabel {
     padding: 8px;
@@ -515,10 +513,39 @@ QProgressBar::chunk {
            <property name="text">
             <string>Измерение 3: ---</string>
            </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_measurement2">
+           <property name="cursor">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    padding: 8px;
+    background-color: rgba(52, 73, 94, 0.6);
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    color: #ecf0f1;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+           </property>
+           <property name="text">
+            <string>Измерение 2: ---</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextSelectableByMouse</set>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QLabel" name="lbl_finalResult">
+           <property name="cursor">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
            <property name="styleSheet">
             <string notr="true">QLabel {
     font-weight: bold;
@@ -533,6 +560,9 @@ QProgressBar::chunk {
            </property>
            <property name="text">
             <string>Итоговый результат: ---</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextSelectableByMouse</set>
            </property>
           </widget>
          </item>
@@ -625,6 +655,9 @@ QProgressBar::chunk {
              <height>16777215</height>
             </size>
            </property>
+           <property name="cursor" stdset="0">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
            <property name="styleSheet">
             <string notr="true">QTextEdit {
     border: 2px solid #34495e;
@@ -654,6 +687,9 @@ p, li { white-space: pre-wrap; }
              <width>250</width>
              <height>16777215</height>
             </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="styleSheet">
             <string notr="true">QPushButton {
@@ -746,8 +782,8 @@ QPushButton:pressed {
     <property name="title">
      <string>Меню</string>
     </property>
-    <addaction name="SaveAction"/>
-    <addaction name="SettingsAction"/>
+    <addaction name="action_SaveData"/>
+    <addaction name="action_Settings"/>
    </widget>
    <addaction name="menu"/>
   </widget>
@@ -756,12 +792,12 @@ QPushButton:pressed {
     <string>Сохранить данные в файл</string>
    </property>
   </action>
-  <action name="SaveAction">
+  <action name="action_SaveData">
    <property name="text">
     <string>Сохранить</string>
    </property>
   </action>
-  <action name="SettingsAction">
+  <action name="action_Settings">
    <property name="text">
     <string>Настройки</string>
    </property>

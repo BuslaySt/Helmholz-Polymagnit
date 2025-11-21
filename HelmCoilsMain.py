@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
@@ -253,6 +254,8 @@ class MainUI(QMainWindow):
         self.data_processor = DataProcessor()
         self.motor_controller = MotorController()
         self.measurement_manager = MeasurementManager()
+
+        self.motor_speed = 100
         
         self.init_ui()
         self.init_graph()
@@ -266,6 +269,8 @@ class MainUI(QMainWindow):
         self.refreshPortsBtn.clicked.connect(self.refresh_ports)
         self.pBtn_GetData.clicked.connect(self.start_measurement_cycle)
         self.pBtn_SaveData.clicked.connect(self.save_data)
+        self.action_SaveData.triggered.connect(self.save_data)
+        self.action_Settings.triggered.connect(self.settings)
         
         # Список меток измерений для удобного доступа
         self.measurement_labels = [
@@ -372,7 +377,7 @@ class MainUI(QMainWindow):
         self.progressBar.setValue(current_meas - 1)
         
         try:
-            self.motor_controller.run_motor(self.motor_port)
+            self.motor_controller.run_motor(self.motor_port, speed=self.motor_speed)
         except Exception as e:
             self.on_serial_error(f"Motor start error: {str(e)}")
             return
@@ -429,7 +434,44 @@ class MainUI(QMainWindow):
         """Обработка завершения получения данных"""
         # После завершения измерения спрашиваем пользователя
         self.ask_measurement_action()
-    
+
+    def save_data(self) -> None:
+        """Сохраняет заголовок и результат измерения в файл measurements.txt, добавляя новую запись в начало файла."""
+        try:
+            # Получаем заголовок из текстового поля
+            header_text = self.txtEd_FileHeader.toPlainText().strip()
+
+            # Получаем финальный результат измерений
+            final_results = self.measurement_manager.get_final_result()
+            if not final_results:
+                QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
+                # final_results = 0.5, 0.1, 0.1, 10.0
+                return
+
+            amplitude, _, _, theta_deg = final_results
+            result_line = f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+
+            # Формируем полную запись
+            full_entry = f"{header_text}\n{result_line}\n" + "-" * 50 + "\n"
+
+            file_path = "measurements.txt"
+
+            # Читаем текущее содержимое файла, если оно есть
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    existing_content = f.read()
+            else:
+                existing_content = ""
+
+            # Записываем новую запись в начало файла
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(full_entry + existing_content)
+
+            self.show_status_message("Результат успешно сохранён в measurements.txt")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка сохранения", f"Не удалось сохранить файл:\n{str(e)}")
+            self.show_status_message("Ошибка при сохранении")
+
     def ask_measurement_action(self):
         """Спросить пользователя о дальнейших действиях"""
         current_meas_num = self.measurement_manager.get_current_measurement_number()
@@ -500,7 +542,6 @@ class MainUI(QMainWindow):
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.3f}°")
                 
-    
     def on_serial_error(self, error_msg):
         """Обработка ошибок последовательного порта"""
         self.update_buttons_state(True)
@@ -525,6 +566,35 @@ class MainUI(QMainWindow):
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
         self.statusBar.showMessage(message, timeout)
+
+    def settings(self):
+        """Открывает окно настроек для изменения скорости двигателя."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Настройки")
+
+        layout = QFormLayout()
+
+        speed_input = QLineEdit()
+        speed_input.setText(str(self.motor_speed))
+        layout.addRow("Скорость двигателя:", speed_input)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        dialog.setLayout(layout)
+
+        if dialog.exec_() == QDialog.Accepted:
+            try:
+                new_speed = int(speed_input.text())
+                if 1 <= new_speed <= 1000:  # допустимый диапазон для MOVE F(...)
+                    self.motor_speed = new_speed
+                    self.show_status_message(f"Скорость двигателя установлена: {self.motor_speed}")
+                else:
+                    QMessageBox.warning(self, "Ошибка", "Скорость должна быть от 1 до 1000.")
+            except ValueError:
+                QMessageBox.warning(self, "Ошибка", "Введите корректное целое число.")
 
 if __name__ == '__main__':
     app = QApplication([])
