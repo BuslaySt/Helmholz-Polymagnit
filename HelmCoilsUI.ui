@@ -496,29 +496,6 @@ QProgressBar::chunk {
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="lbl_measurement3">
-           <property name="cursor">
-            <cursorShape>IBeamCursor</cursorShape>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QLabel {
-    padding: 8px;
-    background-color: rgba(52, 73, 94, 0.6);
-    border-radius: 4px;
-    border-left: 4px solid #3498db;
-    color: #ecf0f1;
-    font-family: &quot;Courier New&quot;, monospace;
-}</string>
-           </property>
-           <property name="text">
-            <string>Измерение 3: ---</string>
-           </property>
-           <property name="textInteractionFlags">
-            <set>Qt::TextSelectableByMouse</set>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QLabel" name="lbl_measurement2">
            <property name="cursor">
             <cursorShape>IBeamCursor</cursorShape>
@@ -535,6 +512,29 @@ QProgressBar::chunk {
            </property>
            <property name="text">
             <string>Измерение 2: ---</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_measurement3">
+           <property name="cursor">
+            <cursorShape>IBeamCursor</cursorShape>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    padding: 8px;
+    background-color: rgba(52, 73, 94, 0.6);
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    color: #ecf0f1;
+    font-family: &quot;Courier New&quot;, monospace;
+}</string>
+           </property>
+           <property name="text">
+            <string>Измерение 3: ---</string>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::TextSelectableByMouse</set>
