@@ -265,12 +265,13 @@ class MainUI(QMainWindow):
         # Привязка сигналов
         self.refreshPortsBtn.clicked.connect(self.refresh_ports)
         self.pBtn_GetData.clicked.connect(self.start_measurement_cycle)
+        self.pBtn_SaveData.clicked.connect(self.save_data)
         
         # Список меток измерений для удобного доступа
         self.measurement_labels = [
-            self.measurement1Label,
-            self.measurement2Label, 
-            self.measurement3Label
+            self.lbl_measurement1,
+            self.lbl_measurement2, 
+            self.lbl_measurement3
         ]
         
         # Инициализация портов
@@ -288,9 +289,9 @@ class MainUI(QMainWindow):
             logo_pixmap_1 = QPixmap("AMTClogo.png")
             logo_pixmap_2 = QPixmap("AMTClogo-L.png")
             if not logo_pixmap_1.isNull():
-                self.logoLabel.setPixmap(logo_pixmap_1.scaled(65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                self.lbl_Logo.setPixmap(logo_pixmap_1.scaled(65, 65, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             if not logo_pixmap_2.isNull():
-                self.logoLabel_2.setPixmap(logo_pixmap_2.scaled(300, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                self.lbl_Logo_2.setPixmap(logo_pixmap_2.scaled(300, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         except Exception as e:
             print(f"Не удалось загрузить логотип: {e}")
 
