@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>951</width>
-    <height>899</height>
+    <width>933</width>
+    <height>905</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,11 +26,11 @@
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,2,1">
     <item>
      <layout class="QHBoxLayout" name="headerLayout">
       <item>
-       <widget class="QLabel" name="logoLabel">
+       <widget class="QLabel" name="lbl_Logo">
         <property name="minimumSize">
          <size>
           <width>80</width>
@@ -108,7 +108,7 @@
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>120</height>
+          <height>100</height>
          </size>
         </property>
         <property name="styleSheet">
@@ -160,18 +160,30 @@ QPushButton:disabled {
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QHBoxLayout" name="portsLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QLabel" name="motorLabel">
            <property name="minimumSize">
             <size>
              <width>130</width>
-             <height>68</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>68</height>
+             <height>70</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -195,13 +207,13 @@ QPushButton:disabled {
            <property name="minimumSize">
             <size>
              <width>150</width>
-             <height>68</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>68</height>
+             <height>70</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -236,13 +248,13 @@ QComboBox::down-arrow {
            <property name="minimumSize">
             <size>
              <width>120</width>
-             <height>68</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>68</height>
+             <height>70</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -266,13 +278,13 @@ QComboBox::down-arrow {
            <property name="minimumSize">
             <size>
              <width>150</width>
-             <height>68</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>68</height>
+             <height>70</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -307,13 +319,13 @@ QComboBox::down-arrow {
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>68</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>150</width>
-             <height>68</height>
+             <height>70</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -349,6 +361,12 @@ QPushButton:pressed {
     </item>
     <item>
      <widget class="QLabel" name="progressLabel">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
+      </property>
       <property name="styleSheet">
        <string notr="true">QLabel {
     font-weight: bold;
@@ -369,6 +387,12 @@ QPushButton:pressed {
     </item>
     <item>
      <widget class="QProgressBar" name="progressBar">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
       <property name="styleSheet">
        <string notr="true">QProgressBar {
     border: 2px solid #34495e;
@@ -411,8 +435,20 @@ QProgressBar::chunk {
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
-          <widget class="QLabel" name="resultsTitle">
+          <widget class="QLabel" name="lbl_results">
            <property name="styleSheet">
             <string notr="true">QLabel {
     font-weight: bold;
@@ -431,7 +467,7 @@ QProgressBar::chunk {
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="measurement1Label">
+          <widget class="QLabel" name="lbl_measurement1">
            <property name="styleSheet">
             <string notr="true">QLabel {
     padding: 8px;
@@ -448,7 +484,7 @@ QProgressBar::chunk {
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="measurement2Label">
+          <widget class="QLabel" name="lbl_measurement2">
            <property name="styleSheet">
             <string notr="true">QLabel {
     padding: 8px;
@@ -465,7 +501,7 @@ QProgressBar::chunk {
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="measurement3Label">
+          <widget class="QLabel" name="lbl_measurement3">
            <property name="styleSheet">
             <string notr="true">QLabel {
     padding: 8px;
@@ -482,7 +518,7 @@ QProgressBar::chunk {
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="finalResultLabel">
+          <widget class="QLabel" name="lbl_finalResult">
            <property name="styleSheet">
             <string notr="true">QLabel {
     font-weight: bold;
@@ -504,21 +540,163 @@ QProgressBar::chunk {
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="logoLabel_2">
-        <property name="minimumSize">
-         <size>
-          <width>300</width>
-          <height>90</height>
-         </size>
-        </property>
+       <widget class="QFrame" name="portsFrame_2">
         <property name="maximumSize">
          <size>
-          <width>300</width>
-          <height>90</height>
+          <width>290</width>
+          <height>16777215</height>
          </size>
         </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
         <property name="styleSheet">
-         <string notr="true">QLabel {
+         <string notr="true">QFrame {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+    border: 2px solid #34495e;
+    border-radius: 8px;
+    padding: 15px;
+}</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_4" stretch="1,3,1,2">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="lbl_FileHeader">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    font-weight: bold;
+    color: #ecf0f1;
+    font-size: 13px;
+    padding: 5px;
+}</string>
+           </property>
+           <property name="text">
+            <string>Данные об изделии:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="txtEd_FileHeader">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>100</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QTextEdit {
+    border: 2px solid #34495e;
+    border-radius: 8px;
+    padding: 5px;
+}</string>
+           </property>
+           <property name="html">
+            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#ecf0f1;&quot;&gt;№ магнита:&lt;br /&gt;Размер:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pBtn_SaveData">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #5d6d7e, stop: 1 #4a5f78);
+    color: white;
+    font-weight: bold;
+    border: 2px solid #34495e;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 12px;
+}
+QPushButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #4a5f78, stop: 1 #3a4a5c);
+    border: 2px solid #2c3e50;
+}
+QPushButton:pressed {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+}</string>
+           </property>
+           <property name="text">
+            <string>Сохранить измерение в файл</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_Logo_2">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>90</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>90</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
     border: 3px solid #3498db;
     border-radius: 8px;
     padding: 8px;
@@ -528,13 +706,16 @@ QProgressBar::chunk {
     color: #3498db;
     font-size: 12px;
 }</string>
-        </property>
-        <property name="text">
-         <string>AMT&amp;C</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
+           </property>
+           <property name="text">
+            <string>AMT&amp;C</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
@@ -552,9 +733,37 @@ QProgressBar::chunk {
 }</string>
    </property>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>933</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Меню</string>
+    </property>
+    <addaction name="SaveAction"/>
+    <addaction name="SettingsAction"/>
+   </widget>
+   <addaction name="menu"/>
+  </widget>
   <action name="action">
    <property name="text">
     <string>Сохранить данные в файл</string>
+   </property>
+  </action>
+  <action name="SaveAction">
+   <property name="text">
+    <string>Сохранить</string>
+   </property>
+  </action>
+  <action name="SettingsAction">
+   <property name="text">
+    <string>Настройки</string>
    </property>
   </action>
  </widget>
