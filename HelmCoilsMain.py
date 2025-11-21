@@ -90,7 +90,7 @@ class DataProcessor:
             datasets.append(grouped)    
 
         df_encoder = pd.concat(datasets).reset_index()
-        df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5)
+        df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5) # 2.5/32767*10**-5 - коэф. для перевода в Вольты*сек
 
         x = df_encoder.integrated_data.index.values
         y = df_encoder.integrated_data.values
@@ -140,7 +140,7 @@ class MotorController:
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=20, distance=111, speed=100):
+    def run_motor(port, revolutions=30, distance=111, speed=100):
         """Запуск мотора на определенное количество оборотов"""
         try:
             with serial.Serial(port, baudrate=57600, bytesize=8, 
