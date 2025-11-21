@@ -365,7 +365,7 @@ class MainUI(QMainWindow):
         # Сброс результатов
         for label in self.measurement_labels:
             label.setText("---")
-        self.finalResultLabel.setText("Результат: ---")
+        self.lbl_finalResult.setText("Результат: ---")
         
         self.show_status_message("Начинаем цикл измерений...")
         self.start_single_measurement()
@@ -537,7 +537,7 @@ class MainUI(QMainWindow):
             final_results = self.measurement_manager.get_final_result()
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
-                self.finalResultLabel.setText(
+                self.lbl_finalResult.setText(
                     f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.3f}°")
