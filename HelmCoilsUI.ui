@@ -770,6 +770,9 @@ QPushButton:pressed {
    </property>
   </widget>
   <widget class="QMenuBar" name="menuBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -798,6 +801,12 @@ QPushButton:pressed {
    </property>
   </action>
   <action name="action_Settings">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Настройки</string>
    </property>
