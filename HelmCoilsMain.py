@@ -438,6 +438,8 @@ class MainUI(QMainWindow):
     def save_data(self) -> None:
         """Сохраняет заголовок и результат измерения в файл measurements.txt, добавляя новую запись в начало файла."""
         try:
+            dateandtime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
             # Получаем заголовок из текстового поля
             header_text = self.txtEd_FileHeader.toPlainText().strip()
 
@@ -452,7 +454,7 @@ class MainUI(QMainWindow):
             result_line = f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
 
             # Формируем полную запись
-            full_entry = f"{header_text}\n{result_line}\n" + "-" * 50 + "\n"
+            full_entry = f"{dateandtime}\n{header_text}\n{result_line}\n" + "-" * 50 + "\n"
 
             file_path = "measurements.txt"
 
