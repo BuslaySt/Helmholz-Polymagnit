@@ -92,13 +92,27 @@ class DataProcessor:
         df_encoder = pd.concat(datasets).reset_index()
         df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5) # 2.5/32767*10**-5 - коэф. для перевода в Вольты*сек
 
+        # x = df_encoder.integrated_data.index.values
+        # y = df_encoder.integrated_data.values
+        # coefficients = np.polyfit(x, y, 1)
+        # trend = np.polyval(coefficients, x) # Убираем трендовую составляющую
+        # df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки
+        
         x = df_encoder.integrated_data.index.values
         y = df_encoder.integrated_data.values
 
-        coefficients = np.polyfit(x, y, 1)
-        trend = np.polyval(coefficients, x)
+        # Координаты первой и последней точек
+        x0, x1 = x[0], x[-1]
+        y0, y1 = y[0], y[-1]
 
+        # Уравнение прямой через две точки: y_trend = a * x + b
+        a = (y1 - y0) / (x1 - x0) if x1 != x0 else 0
+        b = y0 - a * x0
+
+        # Вычисляем трендовую составляющую и вычитаем
+        trend = a * x + b
         df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки
+        
         df_encoder['deg'] = df_encoder.index/10000/step*360
 
         df = df_encoder.reindex(columns=['deg', 'data'])
@@ -376,13 +390,13 @@ class MainUI(QMainWindow):
         self.progressLabel.setText(f"Измерение {current_meas}/3 в процессе...")
         self.progressBar.setValue(current_meas - 1)
         
-        try:
+        try: # Запуск вращения
             self.motor_controller.run_motor(self.motor_port, speed=self.motor_speed)
         except Exception as e:
             self.on_serial_error(f"Motor start error: {str(e)}")
             return
         
-        QTimer.singleShot(500, self.read_sensor)
+        QTimer.singleShot(5000, self.read_sensor) # Через 5 секунд начинаем считывать данные
     
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
