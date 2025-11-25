@@ -279,7 +279,7 @@ class MainUI(QMainWindow):
         # Загрузка логотипа
         self.load_logo()
         
-        # Привязка сигналов
+        # Привязка сигналов к кнопкам и меню
         self.refreshPortsBtn.clicked.connect(self.refresh_ports)
         self.pBtn_GetData.clicked.connect(self.start_measurement_cycle)
         self.pBtn_SaveData.clicked.connect(self.save_data)
