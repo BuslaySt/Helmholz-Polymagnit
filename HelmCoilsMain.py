@@ -293,6 +293,12 @@ class MainUI(QMainWindow):
             self.lbl_measurement3
         ]
         
+        # Заполнение поля для заголовка файла
+        self.txtEd_FileHeader.setStyleSheet('QTextEdit {color: white}')
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+        header_text = f'{now}\nНомер магнита: \nДанные магнита: '
+        self.txtEd_FileHeader.setText(header_text)
+        
         # Инициализация портов
         self.refresh_ports()
         
