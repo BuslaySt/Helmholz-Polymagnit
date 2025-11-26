@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.uic import loadUi
@@ -210,11 +210,11 @@ class MeasurementManager:
         """Проверить завершение всех измерений"""
         return self.current_measurement >= self.total_measurements
     
-    def get_current_measurement_number(self):
+    def get_current_measurement_number(self) -> int:
         """Получить номер текущего измерения"""
         return self.current_measurement + 1
     
-    def get_final_result(self):
+    def get_final_result(self) -> set:
         """Получить финальный результат измерений"""
         if len(self.measurements) != 3:
             return None
@@ -294,10 +294,10 @@ class MainUI(QMainWindow):
         ]
         
         # Заполнение поля для заголовка файла
-        self.txtEd_FileHeader.setStyleSheet('QTextEdit {color: white}')
+        self.txtEd_FileHeader.setStyleSheet('QPlainTextEdit {color: white}')
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
         header_text = f'{now}\nНомер магнита: \nДанные магнита: '
-        self.txtEd_FileHeader.setText(header_text)
+        self.txtEd_FileHeader.setPlainText(header_text)
         
         # Инициализация портов
         self.refresh_ports()
@@ -455,7 +455,48 @@ class MainUI(QMainWindow):
         # После завершения измерения спрашиваем пользователя
         self.ask_measurement_action()
 
-    def save_data(self) -> None:
+    def save_data(self):
+        """Сохраняет заголовок и результат измерения в выбранный пользователем файл."""
+        final_results = self.measurement_manager.get_final_result()
+        if not final_results:
+            QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
+            final_results = (4.97e-05, 0, 0, 15.34)
+            # return
+
+        # Получаем текст из заголовка
+        header_text = self.txtEd_FileHeader.toPlainText().strip()
+        if not header_text:
+            header_text = "Заголовок не указан"
+
+        amplitude, _, _, theta_deg = final_results
+        result_line = f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+
+        full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
+
+        # Открываем диалог сохранения
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Добавить результаты в файл",
+            "measurements.txt",  # начальная директория (можно указать "measurements.txt")
+            "Текстовые файлы (*.txt);;Все файлы (*)"
+        )
+
+        if file_path:
+            try:
+                # Если файл уже существует — добавляем в начало, иначе создаём новый
+                if os.path.exists(file_path):
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        existing = f.read()
+                    full_content = full_content + existing
+
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(full_content)
+
+                self.show_status_message(f"Результат сохранён в {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
+
+    def save_data_old(self) -> None:
         """Сохраняет заголовок и результат измерения в файл measurements.txt, добавляя новую запись в начало файла."""
         try:
             dateandtime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -555,7 +596,7 @@ class MainUI(QMainWindow):
         else:
             self.progressLabel.setText("Цикл измерений завершён")
             
-            # Показываем финальный результат по новой формуле
+            # Показываем финальный результат
             final_results = self.measurement_manager.get_final_result()
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
@@ -563,6 +604,7 @@ class MainUI(QMainWindow):
                     f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.3f}°")
+            self.save_data()
                 
     def on_serial_error(self, error_msg):
         """Обработка ошибок последовательного порта"""
