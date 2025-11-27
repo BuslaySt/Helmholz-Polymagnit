@@ -460,8 +460,8 @@ class MainUI(QMainWindow):
         final_results = self.measurement_manager.get_final_result()
         if not final_results:
             QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
-            final_results = (4.9712e-05, 0, 0, 15.34)
-            # return
+            # final_results = (4.9712e-05, 0, 0, 15.34)
+            return
 
         # Получаем текст из заголовка
         header_text = self.txtEd_FileHeader.toPlainText().strip()
