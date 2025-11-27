@@ -154,7 +154,7 @@ class MotorController:
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=30, distance=111, speed=100):
+    def run_motor(port, revolutions=26, distance=111, speed=100):
         """Запуск мотора на определенное количество оборотов"""
         try:
             with serial.Serial(port, baudrate=57600, bytesize=8, 
@@ -460,80 +460,69 @@ class MainUI(QMainWindow):
         final_results = self.measurement_manager.get_final_result()
         if not final_results:
             QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
-            final_results = (4.97e-05, 0, 0, 15.34)
+            final_results = (4.9712e-05, 0, 0, 15.34)
             # return
 
         # Получаем текст из заголовка
         header_text = self.txtEd_FileHeader.toPlainText().strip()
         if not header_text:
-            header_text = "Заголовок не указан"
+            header_text = "Empty"
 
         amplitude, _, _, theta_deg = final_results
-        result_line = f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
-
-        full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
         # Открываем диалог сохранения
-        file_path, _ = QFileDialog.getSaveFileName(
+        dialog = QFileDialog()
+        # dialog.setViewMode(QFileDialog.Detail)
+        file_path, type = dialog.getSaveFileName(
             self,
-            "Добавить результаты в файл",
-            "measurements.txt",  # начальная директория (можно указать "measurements.txt")
-            "Текстовые файлы (*.txt);;Все файлы (*)"
+            caption = "Добавить результаты в файл",
+            directory = "measurements",  # начальное название файла
+            filter = "Текст (*.txt);;Таблица (*.csv)"
         )
 
         if file_path:
-            try:
-                # Если файл уже существует — добавляем в начало, иначе создаём новый
-                if os.path.exists(file_path):
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        existing = f.read()
-                    full_content = full_content + existing
+            if type == "Текст (*.txt)":
+                result_line = f"Полный момент: {amplitude:.4} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(full_content)
+                try:
+                    # Если файл уже существует — добавляем в начало, иначе создаём новый
+                    if os.path.exists(file_path):
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            existing = f.read()
+                        full_content = full_content + existing
 
-                self.show_status_message(f"Результат сохранён в {file_path}")
-            except Exception as e:
-                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(full_content)
 
-    def save_data_old(self) -> None:
-        """Сохраняет заголовок и результат измерения в файл measurements.txt, добавляя новую запись в начало файла."""
-        try:
-            dateandtime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Получаем заголовок из текстового поля
-            header_text = self.txtEd_FileHeader.toPlainText().strip()
+                    self.show_status_message(f"Результат сохранён в {file_path}")
+                except Exception as e:
+                    QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
+            elif type == "Таблица (*.csv)":
+                    try:
+                        # Подготавливаем строку данных
+                        header_text = self.txtEd_FileHeader.toPlainText().strip().replace('\n', ' | ').replace(',', ';')  # убираем переносы и запятые
+                        new_row = pd.DataFrame([{
+                            "Магнит": header_text,
+                            "Момент": amplitude,
+                            "Угол": theta_deg
+                        }])
 
-            # Получаем финальный результат измерений
-            final_results = self.measurement_manager.get_final_result()
-            if not final_results:
-                QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
-                # final_results = 0.5, 0.1, 0.1, 10.0
-                return
+                        # Проверяем, существует ли файл
+                        file_exists = os.path.isfile(file_path)
 
-            amplitude, _, _, theta_deg = final_results
-            result_line = f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                        # Записываем: если файл есть — без заголовка, иначе — с заголовком
+                        new_row.to_csv(
+                            file_path,
+                            mode='a' if file_exists else 'w',
+                            header=not file_exists,
+                            index=False,
+                            encoding='utf-8'
+                        )
 
-            # Формируем полную запись
-            full_entry = f"{dateandtime}\n{header_text}\n{result_line}\n" + "-" * 50 + "\n"
-
-            file_path = "measurements.txt"
-
-            # Читаем текущее содержимое файла, если оно есть
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    existing_content = f.read()
-            else:
-                existing_content = ""
-
-            # Записываем новую запись в начало файла
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(full_entry + existing_content)
-
-            self.show_status_message("Результат успешно сохранён в measurements.txt")
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка сохранения", f"Не удалось сохранить файл:\n{str(e)}")
-            self.show_status_message("Ошибка при сохранении")
+                        self.show_status_message(f"Результат добавлен в {file_path}")
+                    except Exception as e:
+                        QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить CSV:\n{str(e)}")
 
     def ask_measurement_action(self):
         """Спросить пользователя о дальнейших действиях"""
