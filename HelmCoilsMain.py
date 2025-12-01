@@ -471,7 +471,7 @@ class MainUI(QMainWindow):
             caption = "Добавить результаты в файл",
             directory = "measurements",  # начальное название файла
             filter = "Текст (*.txt);;Таблица (*.csv)",
-            initialFilter="Таблица (*.csv)",
+            initialFilter = "Таблица (*.csv)",
             options = QFileDialog.DontConfirmOverwrite
         )
 
