@@ -90,14 +90,8 @@ class DataProcessor:
             datasets.append(grouped)    
 
         df_encoder = pd.concat(datasets).reset_index()
-        df_encoder['integrated_data'] = -1*df_encoder['data'].cumsum()/32767*2.5*(10**-5) # 2.5/32767*10**-5 - коэф. для перевода в Вольты*сек
+        df_encoder['integrated_data'] = -(2.5/32767 * 1/96937)*df_encoder['data'].cumsum() # 2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase) минус из формулы интегрирования
 
-        # x = df_encoder.integrated_data.index.values
-        # y = df_encoder.integrated_data.values
-        # coefficients = np.polyfit(x, y, 1)
-        # trend = np.polyval(coefficients, x) # Убираем трендовую составляющую
-        # df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки
-        
         x = df_encoder.integrated_data.index.values
         y = df_encoder.integrated_data.values
 
@@ -111,9 +105,9 @@ class DataProcessor:
 
         # Вычисляем трендовую составляющую и вычитаем
         trend = a * x + b
-        df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки
+        df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки [1/м]
         
-        df_encoder['deg'] = df_encoder.index/10000/step*360
+        df_encoder['deg'] = df_encoder.index/10000/step*360 # В градусах
 
         df = df_encoder.reindex(columns=['deg', 'data'])
         
@@ -296,7 +290,8 @@ class MainUI(QMainWindow):
         # Заполнение поля для заголовка файла
         self.txtEd_FileHeader.setStyleSheet('QPlainTextEdit {color: white}')
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-        header_text = f'{now}\nНомер магнита: \nДанные магнита: '
+        temperature = "20°C"
+        header_text = f'{now}; {temperature}\nНомер магнита: \nОписание: '
         self.txtEd_FileHeader.setPlainText(header_text)
         
         # Инициализация портов
@@ -460,7 +455,7 @@ class MainUI(QMainWindow):
         final_results = self.measurement_manager.get_final_result()
         if not final_results:
             QMessageBox.warning(self, "Сохранение", "Нет завершённых измерений для сохранения.")
-            # final_results = (4.9712e-05, 0, 0, 15.34)
+            # final_results = (6664.9712e-05, 0, 0, 15.34)
             return
 
         # Получаем текст из заголовка
@@ -471,13 +466,13 @@ class MainUI(QMainWindow):
         amplitude, _, _, theta_deg = final_results
 
         # Открываем диалог сохранения
-        dialog = QFileDialog()
-        # dialog.setViewMode(QFileDialog.Detail)
-        file_path, type = dialog.getSaveFileName(
+        file_path, type = QFileDialog.getSaveFileName(
             self,
             caption = "Добавить результаты в файл",
             directory = "measurements",  # начальное название файла
-            filter = "Текст (*.txt);;Таблица (*.csv)"
+            filter = "Текст (*.txt);;Таблица (*.csv)",
+            initialFilter="Таблица (*.csv)",
+            options = QFileDialog.DontConfirmOverwrite
         )
 
         if file_path:
@@ -495,7 +490,7 @@ class MainUI(QMainWindow):
                     with open(file_path, 'w', encoding='utf-8') as f:
                         f.write(full_content)
 
-                    self.show_status_message(f"Результат сохранён в {file_path}")
+                    self.show_status_message(f"Результат добавлен в {file_path}")
                 except Exception as e:
                     QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}")
             elif type == "Таблица (*.csv)":
