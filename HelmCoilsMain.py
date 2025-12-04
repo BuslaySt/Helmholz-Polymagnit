@@ -90,7 +90,8 @@ class DataProcessor:
             datasets.append(grouped)    
 
         df_encoder = pd.concat(datasets).reset_index()
-        df_encoder['integrated_data'] = -(2.5/32767 * 1/96937)*df_encoder['data'].cumsum() # 2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase) минус из формулы интегрирования
+        df_encoder['integrated_data'] = -(2.5/32767 * 1/96937)*df_encoder['data'].cumsum()
+        # 2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), минус из формулы интегрирования
 
         x = df_encoder.integrated_data.index.values
         y = df_encoder.integrated_data.values
@@ -437,7 +438,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.5} ± {absolute_error:.2} ({relative_error:.2f}%) [В*с*м]"
+                    f"Измерение {current_idx + 1}: {amplitude:.5e} ± {absolute_error:.1} ({relative_error:.2f}%) [В*с*м]"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -607,9 +608,9 @@ class MainUI(QMainWindow):
             data_series.append(row.deg, row.data)
         
         self.chart.addSeries(data_series)
-        self.chart.createDefaultAxes()
-        self.chart.axisX().setLabelFormat("%.1f")
-        self.chart.axisY().setLabelFormat("%.2e")
+        # self.chart.createDefaultAxes()
+        # self.chart.axisX().setLabelFormat("%.1f")
+        # self.chart.axisY().setLabelFormat("%.2e")
     
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
