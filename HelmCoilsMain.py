@@ -148,7 +148,7 @@ class MotorController:
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=26, distance=111, speed=100):
+    def run_motor(port, revolutions=26, distance=1000/9, speed=100):
         """Запуск мотора на определенное количество оборотов"""
         try:
             with serial.Serial(port, baudrate=57600, bytesize=8, 
