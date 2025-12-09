@@ -608,9 +608,9 @@ class MainUI(QMainWindow):
             data_series.append(row.deg, row.data)
         
         self.chart.addSeries(data_series)
-        # self.chart.createDefaultAxes()
-        # self.chart.axisX().setLabelFormat("%.1f")
-        # self.chart.axisY().setLabelFormat("%.2e")
+        self.chart.createDefaultAxes()
+        self.chart.axisX().setLabelFormat("%.1f")
+        self.chart.axisY().setLabelFormat("%.2e")
     
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
