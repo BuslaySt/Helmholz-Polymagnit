@@ -500,7 +500,7 @@ class MainUI(QMainWindow):
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
             self.df = self.data_processor.integrate_df(df_truncated)
 
-            self.update_graph(self.df)
+            self.update_graph()
 
             amplitude, phase_deg = self.data_processor.get_amplitude(self.df)
             
@@ -671,18 +671,18 @@ class MainUI(QMainWindow):
         QMessageBox.critical(self, "Error", error_msg)
         print(f"Error: {error_msg}")
 
-    def update_graph(self, df):
+    def update_graph(self):
         """Обновление графика текущими данными"""
         self.chart.removeAllSeries()
         data_series = QLineSeries()
-        
-        for row in df.itertuples():
-            data_series.append(row.deg, row.data)
+
+        for row in self.df.itertuples():
+            data_series.append(row.Index, row.volts)
         
         self.chart.addSeries(data_series)
-        # self.chart.createDefaultAxes()
-        # self.chart.axisX().setLabelFormat("%.1f")
-        # self.chart.axisY().setLabelFormat("%.2e")
+        self.chart.createDefaultAxes()
+        self.chart.axisX().setLabelFormat("%.1f")
+        self.chart.axisY().setLabelFormat("%.2e")
     
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
