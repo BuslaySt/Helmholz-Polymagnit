@@ -196,7 +196,7 @@ class DataProcessor:
         f_phase_deg = (f_phase+np.pi/2)*180/np.pi
         # print(f'Fast Goertzel Amp: {f_amp:.5e}, {f_phase = :.3f}°')
 
-        return (f_amp, f_phase_deg)
+        return (f_amp, f_phase+np.pi/2, f_phase_deg)
 
         # maxima = df[df['is_local_max']]
         # minima = df[df['is_local_min']]
@@ -500,9 +500,9 @@ class MainUI(QMainWindow):
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
             self.df = self.data_processor.integrate_df(df_truncated)
 
-            self.update_graph()
+            amplitude, phase, phase_deg = self.data_processor.get_amplitude(self.df)
 
-            amplitude, phase_deg = self.data_processor.get_amplitude(self.df)
+            self.update_graph(amplitude, phase)
             
             # Сохраняем данные текущего измерения (для возможного повтора)
             self.measurement_manager.save_current_measurement_data(amplitude, phase_deg)
@@ -511,7 +511,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.5e} [В*с*м]"
+                    f"Измерение {current_idx + 1}: {amplitude:.5e} [В*с*м], фаза {phase_deg}°"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -671,18 +671,21 @@ class MainUI(QMainWindow):
         QMessageBox.critical(self, "Error", error_msg)
         print(f"Error: {error_msg}")
 
-    def update_graph(self):
+    def update_graph(self, amp, phase):
         """Обновление графика текущими данными"""
         self.chart.removeAllSeries()
         data_series = QLineSeries()
 
-        for row in self.df.itertuples():
-            data_series.append(row.Index, row.volts)
+        x = self.df.index.values
+        y = amp * np.sin(2 * np.pi * 1/10000 * x + phase)
+
+        for a, b in zip(x, y):
+            data_series.append(a, b)
         
         self.chart.addSeries(data_series)
         self.chart.createDefaultAxes()
-        self.chart.axisX().setLabelFormat("%.1f")
-        self.chart.axisY().setLabelFormat("%.2e")
+        self.chart.axisX().setLabelFormat("%d")
+        self.chart.axisY().setLabelFormat("%.1e")
     
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
