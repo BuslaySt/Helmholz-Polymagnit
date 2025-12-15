@@ -438,7 +438,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.5e} ± {absolute_error:.1} ({relative_error:.2f}%) [В*с*м]"
+                    f"Измерение {current_idx + 1}: {amplitude:.3e} ({relative_error:.2f}%) [В*с*м]"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -586,7 +586,7 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, absolute_error, relative_error, theta_deg = final_results
                 self.lbl_finalResult.setText(
-                    f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                    f"Полный момент: {amplitude:.4} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4} ± {absolute_error:.2}; Отклонение θz: {theta_deg:.3f}°")
             self.save_data()
