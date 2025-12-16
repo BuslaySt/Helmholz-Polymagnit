@@ -126,10 +126,11 @@ class DataProcessor:
 
         # 3.2 Интеграл (трапециями по единичному отрезку)
         dt = 1
+        # минус из формулы интегрирования
         df_res['integral'] = -1.0 * integrate.cumulative_trapezoid(df_res['data'], dx=dt, initial=0)
 
         # 4. Пересчет в Вольты*метры*секунды
-        #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (пост катушки), минус из формулы интегрирования
+        #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
         df_res['volts'] = (2.5/32767 * 1/96937 * 1/1144.8)*df_res['integral']
 
         # 5. Угол в градусах
@@ -411,8 +412,8 @@ class MainUI(QMainWindow):
         self.chart.addSeries(self.series)
         self.chart.createDefaultAxes()
         
-        self.chart.axisX().setLabelFormat("%.1f")
-        self.chart.axisY().setLabelFormat("%.2e")
+        self.chart.axisX().setLabelFormat("%d")
+        self.chart.axisY().setLabelFormat("%.1e")
         
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.Antialiasing)
@@ -676,7 +677,7 @@ class MainUI(QMainWindow):
         self.chart.removeAllSeries()
         data_series = QLineSeries()
 
-        x = self.df.index.values
+        x = self.df.index.values/10000*360
         y = amp * np.sin(2 * np.pi * 1/10000 * x + phase)
 
         for a, b in zip(x, y):
