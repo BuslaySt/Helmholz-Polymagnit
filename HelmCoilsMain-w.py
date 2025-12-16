@@ -480,8 +480,8 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
-        self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть изделие", timeout=60000)
         QTimer.singleShot(500, self.get_data)
+        QTimer.singleShot(5000, self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть магнит", timeout=40000))
     
     def get_data(self):
         """Получение данных после чтения датчика"""
@@ -495,7 +495,7 @@ class MainUI(QMainWindow):
         """Обработка полученных данных"""
         try:
             if len(raw_data) != 4194304:
-                QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика.")
+                QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика. Проверьте подключение.")
             df_raw = self.data_processor.process_raw_data(raw_data)
             df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
@@ -599,7 +599,7 @@ class MainUI(QMainWindow):
         
         msg = QMessageBox(self)
         msg.setWindowTitle("Измерение завершено")
-        msg.setText(f"Измерение {current_meas_num}/3 завершено!\n\nПоверните изделие в следующее положение или повторить измерение?")
+        msg.setText(f"Измерение {current_meas_num}/3 завершено!\n\nПоверните магнит в следующее положение или надо повторить измерение?")
         msg.setIcon(QMessageBox.Question)
         
         # Добавляем кнопки
