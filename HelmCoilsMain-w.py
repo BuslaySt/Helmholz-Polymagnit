@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
+import pyqtgraph as pg
 from pyqtgraph import PlotWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt5.QtGui import QPainter, QPixmap
+from PyQt5.QtGui import QPixmap
 import sys, time, os, datetime
 import serial.tools.list_ports
 import pandas as pd
@@ -410,35 +411,13 @@ class MainUI(QMainWindow):
 
         # (Опционально) Настраиваем внешний вид
         self.plot_widget.setBackground('w') # Белый фон
-        self.plot_widget.setTitle("Название графика")
-        self.plot_widget.setLabel('left', 'Значение (В⋅м⋅с)')
+        # self.plot_widget.setTitle("Проекция момента")
+        self.plot_widget.setLabel('left', 'Проекция момента (В⋅с⋅м)')
         self.plot_widget.setLabel('bottom', 'Угол (°)')
         self.plot_widget.showGrid(x=True, y=True)
 
         # Серия данных будет храниться как объект внутри класса
         # self.graph_plot = None # Инициализируем переменную для графика
-
-
-    def init_graph2(self):
-        """Инициализация графика"""
-        self.chart = QChart()
-        # self.chart.setTheme(QChart.ChartThemeBlueIcy)
-        self.chart.setTheme(QChart.ChartThemeBlueCerulean)
-        self.chart.setBackgroundRoundness(0)
-        self.chart.setDropShadowEnabled(True)
-        self.chart.legend().setVisible(False)
-        
-        self.series = QLineSeries()
-        self.chart.addSeries(self.series)
-        self.chart.createDefaultAxes()
-        
-        self.chart.axisX().setLabelFormat("%d")
-        self.chart.axisY().setLabelFormat("%.1e")
-        
-        self.chart_view = QChartView(self.chart)
-        self.chart_view.setRenderHint(QPainter.Antialiasing)
-        self.chartLayout.addWidget(self.chart_view)
-   
 
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
@@ -534,7 +513,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.3e} [В*с*м], фаза {phase_deg:.1f}°"
+                    f"Измерение {current_idx + 1}: {amplitude:.3e} [В⋅с⋅м], фаза {phase_deg:.1f}°"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -573,7 +552,7 @@ class MainUI(QMainWindow):
 
         if file_path:
             if type == "Текст (*.txt)":
-                result_line = f"Полный момент: {amplitude:.4} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                result_line = f"Полный момент: {amplitude:.4} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
                 try:
@@ -681,7 +660,7 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, theta_deg = final_results
                 self.lbl_finalResult.setText(
-                    f"Полный момент: {amplitude:.3} [В*с*м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                    f"Полный момент: {amplitude:.3} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4}; Отклонение θz: {theta_deg:.3f}°")
             self.save_data()
@@ -703,26 +682,6 @@ class MainUI(QMainWindow):
         self.plot_widget.clear()
         self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=2), name="Sine Data")
         self.plot_widget.plot(x, self.df.volts, pen=pg.mkPen(color='r', width=1), name="Raw Data")
-
-    def update_graph2(self, amp, phase):
-        """Обновление графика текущими данными"""
-        self.chart.removeAllSeries()
-        data_series = QLineSeries()
-
-        x = self.df.index.values/10000*360
-        y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
-
-        data_series.append(x, y)
-
-        # for a, b in zip(x, y):
-        #     data_series.append(a, b)
-        
-        self.chart.addSeries(data_series)
-        self.chart.createDefaultAxes()
-        self.chart.legend().setVisible(False)
-        self.chart.axisX().setLabelFormat("%d")
-        self.chart.axisY().setLabelFormat("%.1e")
-        self.chart.setAnimationOptions(QChart.SeriesAnimations)
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
