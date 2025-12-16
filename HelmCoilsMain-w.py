@@ -405,14 +405,27 @@ class MainUI(QMainWindow):
 
     def init_graph(self):
         """Инициализация графика"""
-        self.chart = PlotWidget(self)
-        self.chartLayout.addWidget(self.chart)
+        self.plot_widget = PlotWidget(self)
+        self.chartLayout.addWidget(self.plot_widget)
+
+        # (Опционально) Настраиваем внешний вид
+        self.plot_widget.setBackground('w') # Белый фон, например
+        # self.plot_widget.setTitle("Название графика") # При желании
+        self.plot_widget.setLabel('left', 'Значение (В⋅м⋅с)') # Подпись оси Y
+        self.plot_widget.setLabel('bottom', 'Угол (°)') # Подпись оси X
+        self.plot_widget.showGrid(x=True, y=True) # Показать сетку
+
+        # Серия данных будет храниться как объект внутри класса
+        self.graph_plot = None # Инициализируем переменную для графика
 
 
     def init_graph2(self):
         """Инициализация графика"""
         self.chart = QChart()
-        self.chart.setTheme(QChart.ChartThemeBlueIcy)
+        # self.chart.setTheme(QChart.ChartThemeBlueIcy)
+        self.chart.setTheme(QChart.ChartThemeBlueCerulean)
+        self.chart.setBackgroundRoundness(0)
+        self.chart.setDropShadowEnabled(True)
         self.chart.legend().setVisible(False)
         
         self.series = QLineSeries()
@@ -683,12 +696,13 @@ class MainUI(QMainWindow):
 
     def update_graph(self, amp, phase):
         """Обновление графика текущими данными"""
-        self.chart.clear()
-
-        x = self.df.index.values/10000*360
+        x = self.df.index/10000*360
         y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
 
-        self.chart.plot(x, y, pen='r')
+
+        self.plot_widget.clear()
+        self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=2), name="Sine Data")
+        self.plot_widget.plot(x, self.df.volts, pen=pg.mkPen(color='r', width=1), name="Raw Data")
 
     def update_graph2(self, amp, phase):
         """Обновление графика текущими данными"""
@@ -698,14 +712,17 @@ class MainUI(QMainWindow):
         x = self.df.index.values/10000*360
         y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
 
-        for a, b in zip(x, y):
-            data_series.append(a, b)
+        data_series.append(x, y)
+
+        # for a, b in zip(x, y):
+        #     data_series.append(a, b)
         
         self.chart.addSeries(data_series)
         self.chart.createDefaultAxes()
+        self.chart.legend().setVisible(False)
         self.chart.axisX().setLabelFormat("%d")
         self.chart.axisY().setLabelFormat("%.1e")
-
+        self.chart.setAnimationOptions(QChart.SeriesAnimations)
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
