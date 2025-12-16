@@ -409,14 +409,14 @@ class MainUI(QMainWindow):
         self.chartLayout.addWidget(self.plot_widget)
 
         # (Опционально) Настраиваем внешний вид
-        self.plot_widget.setBackground('w') # Белый фон, например
-        # self.plot_widget.setTitle("Название графика") # При желании
-        self.plot_widget.setLabel('left', 'Значение (В⋅м⋅с)') # Подпись оси Y
-        self.plot_widget.setLabel('bottom', 'Угол (°)') # Подпись оси X
-        self.plot_widget.showGrid(x=True, y=True) # Показать сетку
+        self.plot_widget.setBackground('w') # Белый фон
+        self.plot_widget.setTitle("Название графика")
+        self.plot_widget.setLabel('left', 'Значение (В⋅м⋅с)')
+        self.plot_widget.setLabel('bottom', 'Угол (°)')
+        self.plot_widget.showGrid(x=True, y=True)
 
         # Серия данных будет храниться как объект внутри класса
-        self.graph_plot = None # Инициализируем переменную для графика
+        # self.graph_plot = None # Инициализируем переменную для графика
 
 
     def init_graph2(self):
