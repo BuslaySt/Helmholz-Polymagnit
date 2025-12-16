@@ -678,7 +678,7 @@ class MainUI(QMainWindow):
         data_series = QLineSeries()
 
         x = self.df.index.values/10000*360
-        y = amp * np.sin(2 * np.pi * 1/10000 * x + phase)
+        y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
 
         for a, b in zip(x, y):
             data_series.append(a, b)
