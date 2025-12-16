@@ -488,8 +488,9 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
+        self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть магнит", timeout=60000)
         QTimer.singleShot(500, self.get_data)
-        QTimer.singleShot(5000, self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть магнит", timeout=40000))
+        
     
     def get_data(self):
         """Получение данных после чтения датчика"""
