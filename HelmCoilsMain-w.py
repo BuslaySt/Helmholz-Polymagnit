@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
+from pyqtgraph import PlotWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QPainter, QPixmap
@@ -404,6 +405,12 @@ class MainUI(QMainWindow):
 
     def init_graph(self):
         """Инициализация графика"""
+        self.chart = PlotWidget(self)
+        self.chartLayout.addWidget(self.chart)
+
+
+    def init_graph2(self):
+        """Инициализация графика"""
         self.chart = QChart()
         self.chart.setTheme(QChart.ChartThemeBlueIcy)
         self.chart.legend().setVisible(False)
@@ -419,6 +426,7 @@ class MainUI(QMainWindow):
         self.chart_view.setRenderHint(QPainter.Antialiasing)
         self.chartLayout.addWidget(self.chart_view)
    
+
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
         self.pBtn_GetData.setEnabled(enabled)
@@ -674,6 +682,15 @@ class MainUI(QMainWindow):
 
     def update_graph(self, amp, phase):
         """Обновление графика текущими данными"""
+        self.chart.clear()
+
+        x = self.df.index.values/10000*360
+        y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
+
+        self.chart.plot(x, y, pen='r')
+
+    def update_graph2(self, amp, phase):
+        """Обновление графика текущими данными"""
         self.chart.removeAllSeries()
         data_series = QLineSeries()
 
@@ -687,7 +704,8 @@ class MainUI(QMainWindow):
         self.chart.createDefaultAxes()
         self.chart.axisX().setLabelFormat("%d")
         self.chart.axisY().setLabelFormat("%.1e")
-    
+
+
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
         self.statusBar.showMessage(message, timeout)
