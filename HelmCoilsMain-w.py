@@ -512,7 +512,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.5e} [В*с*м], фаза {phase_deg}°"
+                    f"Измерение {current_idx + 1}: {amplitude:.3e} [В*с*м], фаза {phase_deg:.1f}°"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
