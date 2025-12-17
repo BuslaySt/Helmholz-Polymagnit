@@ -124,7 +124,7 @@ class DataProcessor:
         df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first'}).reset_index(drop=True)
 
         # 3.1 Интеграл (кумулятивная сумма)
-        # df_res['integral'] = -1.0*df_res.data.cumsum()
+        df_res['integral1'] = -1.0*df_res.data.cumsum()
 
         # 3.2 Интеграл (трапециями по единичному отрезку)
         dt = 1
