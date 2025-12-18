@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
 import pyqtgraph as pg
-from pyqtgraph import PlotWidget
+# from pyqtgraph import PlotWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QPixmap
@@ -124,12 +124,12 @@ class DataProcessor:
         df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first'}).reset_index(drop=True)
 
         # 3.1 Интеграл (кумулятивная сумма)
-        df_res['integral1'] = -1.0*df_res.data.cumsum()
+        df_res['integral'] = -1.0*df_res.data.cumsum()
 
         # 3.2 Интеграл (трапециями по единичному отрезку)
-        dt = 1
+        # dt = 1
         # минус из формулы интегрирования
-        df_res['integral'] = -1.0 * integrate.cumulative_trapezoid(df_res['data'], dx=dt, initial=0)
+        # df_res['integral'] = -1.0 * integrate.cumulative_trapezoid(df_res['data'], dx=dt, initial=0)
 
         # 4. Пересчет в Вольты*метры*секунды
         #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
@@ -406,7 +406,7 @@ class MainUI(QMainWindow):
 
     def init_graph(self):
         """Инициализация графика"""
-        self.plot_widget = PlotWidget(self)
+        self.plot_widget = pg.PlotWidget(self)
         self.chartLayout.addWidget(self.plot_widget)
 
         # (Опционально) Настраиваем внешний вид
@@ -480,7 +480,7 @@ class MainUI(QMainWindow):
     
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
-        self.show_status_message("Датчик прочитан, получаем данные... Можно перевернуть магнит", timeout=60000)
+        self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
         QTimer.singleShot(500, self.get_data)
         
     
@@ -678,10 +678,11 @@ class MainUI(QMainWindow):
         x = self.df.index/10000*360
         y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
 
-
         self.plot_widget.clear()
-        self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=2), name="Sine Data")
-        self.plot_widget.plot(x, self.df.volts, pen=pg.mkPen(color='r', width=1), name="Raw Data")
+        self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=3), name="Sine Data")
+        # self.plot_widget.plot(x, y, pen='b', width=5, name="Sine Data")
+        # self.plot_widget.plot(x, y+0.00001, pen='g', width=15, name="Sine Data 2")
+        # self.plot_widget.plot(x, self.df.volts, pen=pg.mkPen(color='r', width=3), name="Raw Data")
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
