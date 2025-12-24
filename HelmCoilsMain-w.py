@@ -95,7 +95,7 @@ class DataProcessor:
                 return df.iloc[start_idx:end_idx].copy()
 
     @staticmethod
-    def integrate_df(df_trimmed: pd.DataFrame, step:int=25) -> pd.DataFrame:
+    def integrate_df(df_trimmed: pd.DataFrame) -> pd.DataFrame:
         """Полное интегрирование данных - основной метод"""
         # Усредняем по значениям encoder и вычисляем интеграл по всему периоду данных
         # 1. Группировка по периодам (непрерывные одинаковые значения encoder)
@@ -133,18 +133,18 @@ class DataProcessor:
         y_trend = a * x + b
         df_res['detrend'] = y - y_trend
 
-        # 6. Угол в градусах
+        # 6. Угол поворота в градусах
         df_res['deg'] = (df_res['period']/10000)*360
 
         return df_res
 
     @staticmethod
-    def get_amplitude(df_res: pd.DataFrame) -> tuple:
+    def get_amplitude(df: pd.DataFrame) -> tuple:
         """Вычисление амплитуды алгоритмом Гёрцеля"""
         norm_freq = 1 / 10000
-        f_amp, f_phase = fg.goertzel(df_res.detrend.values, norm_freq)
+        f_amp, f_phase = fg.goertzel(df.detrend.values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
-        f_phase_deg = (f_phase+np.pi/2)*180/np.pi
+        f_phase_deg = np.degrees(f_phase+np.pi/2)
         # print(f'Fast Goertzel Amp: {f_amp:.5e}, {f_phase = :.3f}°')
 
         return (f_amp, f_phase+np.pi/2, f_phase_deg)
@@ -417,12 +417,12 @@ class MainUI(QMainWindow):
 
             amplitude, phase, phase_deg = self.data_processor.get_amplitude(self.df)
 
-            self.update_graph(amplitude, phase)
+            self.update_graph()
             
             # Сохраняем данные текущего измерения (для возможного повтора)
             self.measurement_manager.save_current_measurement_data(amplitude, phase_deg)
             
-            # Обновляем интерфейс с результатом текущего измерения
+            # Обновляем интерфейс с результатом текущего измерения      
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
@@ -465,7 +465,7 @@ class MainUI(QMainWindow):
 
         if file_path:
             if type == "Текст (*.txt)":
-                result_line = f"Полный момент: {amplitude:.4} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                result_line = f"Полный момент: {amplitude:.3e} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
                 try:
@@ -573,9 +573,9 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, theta_deg = final_results
                 self.lbl_finalResult.setText(
-                    f"Полный момент: {amplitude:.3} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                    f"Полный момент: {amplitude:.3e} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
-                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4}; Отклонение θz: {theta_deg:.3f}°")
+                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4e}; Отклонение θz: {theta_deg:.3f}°")
             self.save_data()
                 
     def on_serial_error(self, error_msg):
@@ -586,13 +586,13 @@ class MainUI(QMainWindow):
         QMessageBox.critical(self, "Error", error_msg)
         print(f"Error: {error_msg}")
 
-    def update_graph(self, amp, phase):
+    def update_graph(self):
         """Обновление графика текущими данными"""
-        x = self.df.index/10000*360
-        y = amp * np.sin(2 * np.pi * 1/360 * x + phase)
+        x = self.df.deg
+        y = self.df.detrend
 
         self.plot_widget.clear()
-        self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=3), name="Sine Data")
+        self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=3), name="Магнитный поток")
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
