@@ -58,25 +58,6 @@ class DataProcessor:
         raw_encoder = rawdata[2097152:]
         encoder = raw_encoder.view(dtype='>i2').astype(np.int16)
 
-        # df_raw = pd.DataFrame({
-        #     'encoder': encoder,
-        #     'data': data
-        # })
-        
-        # data = []
-        # for num in range(0, 2097152, 2):
-        #     hi_byte = raw_data[num]
-        #     hi_byte = hi_byte if hi_byte < 128 else hi_byte - 256
-        #     lo_byte = raw_data[num + 1]    
-        #     data.append(hi_byte * 256 + lo_byte)
-
-        # encoder = []
-        # for num in range(2097152, len(raw_data) - 1, 2):
-        #     hi_byte = raw_data[num]
-        #     hi_byte = hi_byte if hi_byte < 128 else hi_byte - 256
-        #     lo_byte = raw_data[num + 1]    
-        #     encoder.append(hi_byte * 256 + lo_byte)
-            
         return pd.DataFrame({'encoder': encoder, 'data': data})
     
     @staticmethod
@@ -121,7 +102,7 @@ class DataProcessor:
         df_trimmed['period'] = (df_trimmed['encoder'] != df_trimmed['encoder'].shift()).cumsum()
 
         # 2. Группируем по периоду, затем вычисляем среднее, после чего сбрасываем индекс и период
-        df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first'}).reset_index(drop=True)
+        df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first', 'period': 'first'}).reset_index(drop=True)
 
         # 3.1 Интеграл (кумулятивная сумма)
         df_res['integral'] = -1.0*df_res.data.cumsum()
@@ -135,90 +116,38 @@ class DataProcessor:
         #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
         df_res['volts'] = (2.5/32767 * 1/96937 * 1/1144.8)*df_res['integral']
 
-        # 5. Угол в градусах
-        df_res['deg'] = (df_res['encoder']/10000)*360
+        # 5. Детренд
+
+        x = df_res.index.values
+        y = df_res.volts.values
+
+        # Координаты первой и последней точек
+        x0, x1 = x[0], x[-1]
+        y0, y1 = y[0], y[-1]
+
+        # Уравнение прямой через две точки: y_trend = a * x + b
+        a = (y1 - y0) / (x1 - x0) if x1 != x0 else 0
+        b = y0 - a * x0
+
+        # Вычисляем трендовую составляющую и вычитаем
+        y_trend = a * x + b
+        df_res['detrend'] = y - y_trend
+
+        # 6. Угол в градусах
+        df_res['deg'] = (df_res['period']/10000)*360
 
         return df_res
-
-        # bins = range(0, len(df_filtered) + step, step)
-
-        # split_points = df_filtered.index[(df_filtered['encoder'].shift(1) - df_filtered['encoder'] > 1000)] # Сплитуем по переходу больше 1000
-        # # split_points = [0] + split_points.tolist() + [len(df_filtered)]
-
-        # datasets = []
-        # for i in range(len(split_points) - 1):
-        #     start_idx = split_points[i]
-        #     end_idx = split_points[i + 1]
-        #     dataset_part = df_filtered.iloc[start_idx:end_idx].copy()
-        #     dataset_part.encoder = dataset_part.encoder + 10000 * i
-
-        #     dataset_part['bin'] = pd.cut(dataset_part['encoder'], bins=bins, right=False, labels=bins[:-1])
-        #     grouped = dataset_part.groupby('bin', observed=True)['data'].sum()
-        #     datasets.append(grouped)    
-
-        # df_encoder = pd.concat(datasets).reset_index()
-        # df_encoder['integrated_data'] = -(2.5/32767 * 1/96937)*df_encoder['data'].cumsum()
-        # # 2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), минус из формулы интегрирования
-
-        # x = df_encoder.integrated_data.index.values
-        # y = df_encoder.integrated_data.values
-
-        # # Координаты первой и последней точек
-        # x0, x1 = x[0], x[-1]
-        # y0, y1 = y[0], y[-1]
-
-        # # Уравнение прямой через две точки: y_trend = a * x + b
-        # a = (y1 - y0) / (x1 - x0) if x1 != x0 else 0
-        # b = y0 - a * x0
-
-        # # Вычисляем трендовую составляющую и вычитаем
-        # trend = a * x + b
-        # df_encoder['data'] = (y - trend) / 1144.8 # 1144.8 - Постоянная катушки [1/м]
-        
-        # df_encoder['deg'] = df_encoder.index/10000/step*360 # В градусах
-
-        # df = df_encoder.reindex(columns=['deg', 'data'])
-        
-        # local_maxima = argrelextrema(df.data.values, np.greater, order=100)[0]
-        # local_minima = argrelextrema(df.data.values, np.less, order=100)[0]
-
-        # df['is_local_max'] = False
-        # df['is_local_min'] = False
-
-        # df.loc[local_maxima, 'is_local_max'] = True
-        # df.loc[local_minima, 'is_local_min'] = True
-
-        return df
 
     @staticmethod
     def get_amplitude(df_res: pd.DataFrame) -> tuple:
         """Вычисление амплитуды алгоритмом Гёрцеля"""
         norm_freq = 1 / 10000
-        f_amp, f_phase = fg.goertzel(df_res.volts.values, norm_freq)
+        f_amp, f_phase = fg.goertzel(df_res.detrend.values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
         f_phase_deg = (f_phase+np.pi/2)*180/np.pi
         # print(f'Fast Goertzel Amp: {f_amp:.5e}, {f_phase = :.3f}°')
 
         return (f_amp, f_phase+np.pi/2, f_phase_deg)
-
-        # maxima = df[df['is_local_max']]
-        # minima = df[df['is_local_min']]
-
-        # mean_max = maxima['data'].mean()
-        # mean_min = minima['data'].mean()
-
-        # amplitude = (mean_max - mean_min)/2
-
-        # std_max = maxima['data'].std(ddof=1)
-        # std_error_max = std_max / np.sqrt(len(maxima))
-
-        # std_min = minima['data'].std(ddof=1)
-        # std_error_min = std_min / np.sqrt(len(minima))
-
-        # absolute_error = np.sqrt(std_error_max**2 + std_error_min**2) / 2
-        # relative_error = absolute_error / amplitude * 100
-
-        # return (amplitude, absolute_error, relative_error)
 
 class MotorController:
     """Класс для управления мотором"""
@@ -294,22 +223,6 @@ class MeasurementManager:
         sum_of_squares = sum(amp**2 for amp in amplitudes) / 2
         final_amplitude = np.sqrt(sum_of_squares)
         
-        # Вычисляем погрешность финального результата
-        # Погрешность по формуле для функции f = sqrt(a^2 + b^2 + c^2)/2
-        # absolute_errors = [m['absolute_error'] for m in self.measurements]
-        
-        # Частные производные: df/dai = (ai) / (2 * sqrt(a1^2 + a2^2 + a3^2))
-        # denominator = 2 * np.sqrt(sum_of_squares)
-        # partial_derivatives = [amp / denominator for amp in amplitudes]
-        
-        # Погрешность финального результата
-        # final_absolute_error = np.sqrt(
-        #     sum((partial_derivatives[i] * absolute_errors[i])**2 for i in range(3))
-        # )
-        
-        # Относительная погрешность
-        # final_relative_error = final_absolute_error / final_amplitude * 100
-
         # Угол отклонения от нормали (оси z)
         M_xy = amplitudes[0]
         M_yz = amplitudes[1]
@@ -680,9 +593,6 @@ class MainUI(QMainWindow):
 
         self.plot_widget.clear()
         self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=3), name="Sine Data")
-        # self.plot_widget.plot(x, y, pen='b', width=5, name="Sine Data")
-        # self.plot_widget.plot(x, y+0.00001, pen='g', width=15, name="Sine Data 2")
-        # self.plot_widget.plot(x, self.df.volts, pen=pg.mkPen(color='r', width=3), name="Raw Data")
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
