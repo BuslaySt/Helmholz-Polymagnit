@@ -426,7 +426,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.3e} [В⋅с⋅м], фаза {phase_deg:.1f}°"
+                    f"Измерение {current_idx + 1}: {amplitude:.3e} [Вб⋅м], фаза {phase_deg:.1f}°"
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
@@ -465,7 +465,7 @@ class MainUI(QMainWindow):
 
         if file_path:
             if type == "Текст (*.txt)":
-                result_line = f"Полный момент: {amplitude:.3e} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
                 try:
@@ -573,7 +573,7 @@ class MainUI(QMainWindow):
             if final_results:
                 amplitude, theta_deg = final_results
                 self.lbl_finalResult.setText(
-                    f"Полный момент: {amplitude:.3e} [В⋅с⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                    f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
                 )
                 self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4e}; Отклонение θz: {theta_deg:.3f}°")
             self.save_data()
