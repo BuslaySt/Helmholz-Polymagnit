@@ -1,3 +1,27 @@
+# --- НАЧАЛО: Пользовательские переменные ---
+# Параметры вращения мотора
+MOTOR_REVOLUTIONS = 26          # Количество оборотов мотора за измерение
+MOTOR_DISTANCE_FACTOR = 1000/9  # Фактор расстояния для команды мотора
+MOTOR_DEFAULT_SPEED = 100       # Скорость мотора по умолчанию
+
+# Параметры соединения
+SENSOR_SERIAL_BAUDRATE = 921600
+MOTOR_SERIAL_BAUDRATE = 57600
+MOTOR_SERIAL_PARITY = 'N'
+MOTOR_SERIAL_STOPBITS = 1
+MOTOR_SERIAL_BYTESIZE = 8
+MOTOR_SERIAL_TIMEOUT = 0
+DATA_READ_SIZE = 4194304  # Размер данных для чтения с датчика (в байтах)
+
+# Параметры калибровки/пересчета
+ADC_VOLT_REFERENCE = 2.5        # Опорное напряжение АЦП [В]
+ADC_BIT_COUNT = 32767           # Максимальное значение АЦП (±16 бит)
+TIMEBASE_CONSTANT = 96937       # Постоянная времени системы [мкс]
+COIL_CONSTANT = 1144.8          # Постоянная катушки [1/м]
+ENCODER_PULSES_PER_REV = 10000  # Количество импульсов энкодера на оборот
+
+# --- КОНЕЦ: Пользовательские переменные ---
+
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
 from PyQt5.QtChart import QChart, QChartView, QLineSeries
@@ -114,7 +138,7 @@ class DataProcessor:
 
         # 4. Пересчет в Вольты*метры*секунды
         #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
-        df_res['volts'] = (2.5/32767 * 1/96937 * 1/1144.8)*df_res['integral']
+        df_res['volts'] = (ADC_VOLT_REFERENCE/ADC_BIT_COUNT / TIMEBASE_CONSTANT / COIL_CONSTANT)*df_res['integral']
 
         # 5. Детренд
 
@@ -134,14 +158,14 @@ class DataProcessor:
         df_res['detrend'] = y - y_trend
 
         # 6. Угол поворота в градусах
-        df_res['deg'] = (df_res['period']/10000)*360
+        df_res['deg'] = (df_res['period']/ENCODER_PULSES_PER_REV)*360
 
         return df_res
 
     @staticmethod
     def get_amplitude(df: pd.DataFrame) -> tuple:
         """Вычисление амплитуды алгоритмом Гёрцеля"""
-        norm_freq = 1 / 10000
+        norm_freq = 1 / ENCODER_PULSES_PER_REV
         f_amp, f_phase = fg.goertzel(df.detrend.values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
         f_phase_deg = np.degrees(f_phase+np.pi/2)
@@ -153,11 +177,11 @@ class MotorController:
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=26, distance=1000/9, speed=100):
+    def run_motor(port, revolutions=MOTOR_REVOLUTIONS, distance=MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
         """Запуск мотора на определенное количество оборотов"""
         try:
-            with serial.Serial(port, baudrate=57600, bytesize=8, 
-                             parity='N', stopbits=1, timeout=0) as serial_conn:
+            with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
+                             parity=MOTOR_SERIAL_PARITY, stopbits=MOTOR_SERIAL_STOPBITS, timeout=MOTOR_SERIAL_TIMEOUT) as serial_conn:
                 
                 command = f'ON\rMOVE L(-{int(revolutions * distance)})F({int(speed)})\rOFF\r'
                 return serial_conn.write(command.encode("utf-8"))
@@ -217,21 +241,23 @@ class MeasurementManager:
             return None
         
         # Извлекаем амплитуды из всех трех измерений
-        amplitudes = sorted([m['amplitude'] for m in self.measurements])
+        sorted_results = sorted([m for m in self.measurements], key = lambda measure: measure['amplitude'])
         
         # Вычисляем финальный результат по формуле
-        sum_of_squares = sum(amp**2 for amp in amplitudes) / 2
+        sum_of_squares = sum(result['amplitude']**2 for result in sorted_results) / 2
         final_amplitude = np.sqrt(sum_of_squares)
         
         # Угол отклонения от нормали (оси z)
-        M_xy = amplitudes[0]
-        M_yz = amplitudes[1]
-        M_zx = amplitudes[2]
+        M_xy = sorted_results[0]['amplitude']
+        M_yz = sorted_results[1]['amplitude']
+        M_zx = sorted_results[2]['amplitude']
+
+        phase_xy = sorted_results[0]['phase']
 
         theta_rad = np.arctan(M_xy / (np.sqrt(M_yz**2 + M_zx**2 - M_xy**2)/2))
         theta_deg = np.degrees(theta_rad)
         
-        return (final_amplitude, theta_deg)
+        return (final_amplitude, theta_deg, phase_xy)
     
     def get_individual_results(self):
         """Получить результаты отдельных измерений"""
@@ -386,7 +412,7 @@ class MainUI(QMainWindow):
     
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
-        self.serial_worker = SerialWorker(self.sensor_port, 'R', 11)
+        self.serial_worker = SerialWorker(port=self.sensor_port, command='R', timeout=11)
         self.serial_worker.finished.connect(self.on_read_sensor_finished)
         self.serial_worker.error.connect(self.on_serial_error)
         self.serial_worker.start()
@@ -399,7 +425,7 @@ class MainUI(QMainWindow):
     
     def get_data(self):
         """Получение данных после чтения датчика"""
-        self.serial_worker = SerialWorker(self.sensor_port, 'S', 46, 4194304)
+        self.serial_worker = SerialWorker(port=self.sensor_port, command='S', timeout=46, read_size=DATA_READ_SIZE)
         self.serial_worker.data_ready.connect(self.on_data_received)
         self.serial_worker.error.connect(self.on_serial_error)
         self.serial_worker.finished.connect(self.on_get_data_finished)
@@ -408,7 +434,7 @@ class MainUI(QMainWindow):
     def on_data_received(self, raw_data):
         """Обработка полученных данных"""
         try:
-            if len(raw_data) != 4194304:
+            if len(raw_data) != DATA_READ_SIZE:
                 QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика. Проверьте подключение.")
             df_raw = self.data_processor.process_raw_data(raw_data)
             df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
@@ -451,7 +477,7 @@ class MainUI(QMainWindow):
         if not header_text:
             header_text = "Empty"
 
-        amplitude, theta_deg = final_results
+        amplitude, theta_deg, phase_xy = final_results
 
         # Открываем диалог сохранения
         file_path, type = QFileDialog.getSaveFileName(
@@ -465,7 +491,7 @@ class MainUI(QMainWindow):
 
         if file_path:
             if type == "Текст (*.txt)":
-                result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°, азимут φ: {phase_xy:.2f}°"
                 full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
                 try:
@@ -488,7 +514,8 @@ class MainUI(QMainWindow):
                         new_row = pd.DataFrame([{
                             "Магнит": header_text,
                             "Момент": amplitude,
-                            "Угол": theta_deg
+                            "Угол": theta_deg,
+                            "Азимут": phase_xy
                         }])
 
                         # Проверяем, существует ли файл
@@ -571,11 +598,11 @@ class MainUI(QMainWindow):
             # Показываем финальный результат
             final_results = self.measurement_manager.get_final_result()
             if final_results:
-                amplitude, theta_deg = final_results
+                amplitude, theta_deg, phase_xy = final_results
                 self.lbl_finalResult.setText(
-                    f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°"
+                    f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°, азимут φ: {phase_xy:.2f}°"
                 )
-                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4e}; Отклонение θz: {theta_deg:.3f}°")
+                self.show_status_message(f"Цикл измерений завершён! Полный момент: {amplitude:.4e}; Отклонение θz: {theta_deg:.2f}°, азимут φ: {phase_xy:.2f}°")
             self.save_data()
                 
     def on_serial_error(self, error_msg):
