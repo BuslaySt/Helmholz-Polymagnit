@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>933</width>
-    <height>905</height>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,7 +26,7 @@
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,2,1">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,2,1">
     <item>
      <layout class="QHBoxLayout" name="headerLayout">
       <item>
@@ -113,6 +113,9 @@
         </property>
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Начать цикл измерений</string>
         </property>
         <property name="styleSheet">
          <string notr="true">QPushButton {
@@ -219,6 +222,9 @@ QPushButton:disabled {
              <height>70</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Выбрать порт двигателя</string>
+           </property>
            <property name="styleSheet">
             <string notr="true">QComboBox {
     border: 2px solid #5d6d7e;
@@ -290,6 +296,9 @@ QComboBox::down-arrow {
              <height>70</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Выбрать порт двигателя</string>
+           </property>
            <property name="styleSheet">
             <string notr="true">QComboBox {
     border: 2px solid #5d6d7e;
@@ -334,6 +343,9 @@ QComboBox::down-arrow {
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
+           <property name="toolTip">
+            <string>Обновить выбор портов</string>
+           </property>
            <property name="styleSheet">
             <string notr="true">QPushButton {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -366,15 +378,19 @@ QPushButton:pressed {
      </layout>
     </item>
     <item>
-     <widget class="QLabel" name="progressLabel">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">QLabel {
+     <layout class="QHBoxLayout" name="progressBarLayout">
+      <item>
+       <layout class="QVBoxLayout" name="progressBarLayoutV">
+        <item>
+         <widget class="QLabel" name="progressLabel">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QLabel {
     font-weight: bold;
     color: #bdc3c7;
     font-size: 13px;
@@ -382,25 +398,31 @@ QPushButton:pressed {
     background-color: rgba(44, 62, 80, 0.7);
     border-radius: 5px;
 }</string>
-      </property>
-      <property name="text">
-       <string>SYSTEM READY</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QProgressBar" name="progressBar">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>16777215</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">QProgressBar {
+          </property>
+          <property name="text">
+           <string>SYSTEM READY</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar">
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QProgressBar {
     border: 2px solid #34495e;
     border-radius: 6px;
     text-align: center;
@@ -415,8 +437,68 @@ QProgressBar::chunk {
     border-radius: 4px;
     border: 1px solid #2471a3;
 }</string>
-      </property>
-     </widget>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pBtn_refreshGraph">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>50</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Обновить график</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #5d6d7e, stop: 1 #4a5f78);
+    color: white;
+    font-weight: bold;
+    border: 2px solid #34495e;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 12px;
+}
+QPushButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #4a5f78, stop: 1 #3a4a5c);
+    border: 2px solid #2c3e50;
+}
+QPushButton:pressed {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #3a4a5c, stop: 1 #2c3e50);
+}</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>refresh-circle.svg</normaloff>refresh-circle.svg</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <layout class="QHBoxLayout" name="chartLayout"/>
