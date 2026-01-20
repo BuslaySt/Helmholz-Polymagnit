@@ -290,6 +290,7 @@ class MainUI(QMainWindow):
         self.refreshPortsBtn.clicked.connect(self.refresh_ports)
         self.pBtn_GetData.clicked.connect(self.start_measurement_cycle)
         self.pBtn_SaveData.clicked.connect(self.save_data)
+        self.pBtn_refreshGraph.clicked.connect(self.update_graph)
         self.action_SaveData.triggered.connect(self.save_data)
         self.action_Settings.triggered.connect(self.settings)
         
@@ -615,11 +616,15 @@ class MainUI(QMainWindow):
 
     def update_graph(self):
         """Обновление графика текущими данными"""
+        if not self.df:
+            QMessageBox.warning(self, "График", "Нет завершённых измерений для отрисовки графика.")
+            return
         x = self.df.deg
         y = self.df.detrend
 
         self.plot_widget.clear()
         self.plot_widget.plot(x, y, pen=pg.mkPen(color='b', width=3), name="Магнитный поток")
+        self.plot_widget.autoRange()
 
     def show_status_message(self, message, timeout=5000):
         """Показать сообщение в статус баре"""
