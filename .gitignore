@@ -5,8 +5,6 @@
 /img
 /data
 /dev
+/code
 /code_old
 *.csv
-/code/еуые
-code/HarmData.ipynb
-code/HarmData_fast.ipynb
