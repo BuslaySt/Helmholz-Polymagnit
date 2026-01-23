@@ -182,7 +182,7 @@ class MotorController:
             with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
                              parity=MOTOR_SERIAL_PARITY, stopbits=MOTOR_SERIAL_STOPBITS, timeout=MOTOR_SERIAL_TIMEOUT) as serial_conn:
                 
-                command = f'ON\rMOVE L(-{int(revolutions * distance)})F({int(speed)})\rOFF\r'
+                command = f'ON\rMOVE L(-{int(revolutions * distance)})F({int(speed)})\rOFF\r' # MOVE L(2888)F(100)
                 return serial_conn.write(command.encode("utf-8"))
 
         except Exception as e:
