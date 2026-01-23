@@ -616,7 +616,7 @@ class MainUI(QMainWindow):
 
     def update_graph(self):
         """Обновление графика текущими данными"""
-        if not self.df:
+        if self.df is None or self.df.empty:
             QMessageBox.warning(self, "График", "Нет завершённых измерений для отрисовки графика.")
             return
         x = self.df.deg
