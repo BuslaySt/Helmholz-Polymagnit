@@ -491,7 +491,7 @@ class MainUI(QMainWindow):
 
         if file_path:
             if type == "Текст (*.txt)":
-                result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.2f}°, азимут φ: {phase_xy:.2f}°"
+                result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.1f}°, азимут φ: {phase_xy:.1f}°"
                 full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
 
                 try:
