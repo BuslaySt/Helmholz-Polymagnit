@@ -169,7 +169,6 @@ class DataProcessor:
         f_amp, f_phase = fg.goertzel(df.detrend.values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
         f_phase_deg = np.degrees(f_phase+np.pi/2)
-        # print(f'Fast Goertzel Amp: {f_amp:.5e}, {f_phase = :.3f}°')
 
         return (f_amp, f_phase+np.pi/2, f_phase_deg)
 
@@ -453,7 +452,7 @@ class MainUI(QMainWindow):
             current_idx = self.measurement_manager.current_measurement
             if current_idx < len(self.measurement_labels):
                 self.measurement_labels[current_idx].setText(
-                    f"Измерение {current_idx + 1}: {amplitude:.3e} [Вб⋅м], фаза {phase_deg:.1f}°"
+                    f"Измерение {current_idx + 1}: {amplitude:.3e} [Вб⋅м]" #, фаза {phase_deg:.1f}°
                 )
             
             self.show_status_message(f'Измерение {current_idx + 1}/3 завершено!')
