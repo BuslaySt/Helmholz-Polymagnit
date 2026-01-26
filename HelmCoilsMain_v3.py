@@ -1,7 +1,7 @@
 # --- НАЧАЛО: Пользовательские переменные ---
 # Параметры вращения мотора
-MOTOR_REVOLUTIONS = 26          # Количество оборотов мотора за измерение
-MOTOR_DISTANCE_FACTOR = 1000/9  # Фактор расстояния для команды мотора
+MOTOR_REVOLUTIONS = 15          # Количество оборотов мотора за измерение
+MOTOR_DISTANCE_FACTOR = 115     # Фактор расстояния на один оборот мотора
 MOTOR_DEFAULT_SPEED = 100       # Скорость мотора по умолчанию
 
 # Параметры соединения
@@ -12,7 +12,7 @@ MOTOR_SERIAL_PARITY = 'N'
 MOTOR_SERIAL_STOPBITS = 1
 MOTOR_SERIAL_BYTESIZE = 8
 MOTOR_SERIAL_TIMEOUT = 0
-DATA_READ_SIZE = 250000  # Размер данных для чтения с датчика (в байтах)
+DATA_READ_SIZE = 400000  # Размер данных для чтения с датчика (в байтах)
 DATA_READ_SIZE_STEP = 1000  # Размер окна данных для чтения с датчика (в байтах)
 
 # Параметры калибровки/пересчета
@@ -39,35 +39,7 @@ import numpy as np
 import fastgoertzel as fg
 from scipy import integrate
 from scipy.signal import argrelextrema, medfilt
-
-class SerialWorker(QThread):
-    """Поток для выполнения операций с последовательным портом"""
-    finished = pyqtSignal()
-    error = pyqtSignal(str)
-    data_ready = pyqtSignal(bytes)
-    
-    def __init__(self, port, command, timeout, read_size=None):
-        super().__init__()
-        self.port = port
-        self.command = command
-        self.timeout = timeout
-        self.read_size = read_size
-        
-    def run(self):
-        try:
-            with serial.Serial(self.port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
-                             stopbits=MOTOR_SERIAL_STOPBITS, timeout=self.timeout) as serial_conn:
-                serial_conn.write(self.command.encode())
-
-                if self.read_size:
-                    raw_data = serial_conn.read(self.read_size)
-                    self.data_ready.emit(raw_data)
-                else:
-                    time.sleep(self.timeout)
-        except Exception as e:
-            self.error.emit(f"Ошибка последовательного порта: {str(e)}")
-        finally:
-            self.finished.emit()
+import crcmod
 
 class DataProcessor:
     """Класс для обработки данных"""
@@ -176,13 +148,13 @@ class MotorController:
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=MOTOR_REVOLUTIONS, distance=MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
+    def run_motor(port, distance=MOTOR_REVOLUTIONS*MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
         """Запуск мотора на определенное количество оборотов"""
         try:
             with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
                              parity=MOTOR_SERIAL_PARITY, stopbits=MOTOR_SERIAL_STOPBITS, timeout=MOTOR_SERIAL_TIMEOUT) as serial_conn:
                 
-                command = f'ON\rMOVE L(-{int(revolutions * distance)})F({int(speed)})\rOFF\r' # MOVE L(2888)F(100)
+                command = f'ON\rMOVE L(-{int(distance)})F({int(speed)})\rOFF\r' # MOVE L(2888)F(100)
                 return serial_conn.write(command.encode("utf-8"))
 
         except Exception as e:
@@ -339,9 +311,9 @@ class MainUI(QMainWindow):
             self.cBox_SensorPort.addItem(port.device)
         
         if self.cBox_MotorPort.count() > 1:
-            self.cBox_MotorPort.setCurrentIndex(1) # TODO Определение порта по ответу
+            self.cBox_MotorPort.setCurrentIndex(0) # TODO Определение порта по ответу
         if self.cBox_SensorPort.count() > 0:
-            self.cBox_SensorPort.setCurrentIndex(0)
+            self.cBox_SensorPort.setCurrentIndex(1)
 
     def init_graph(self):
         """Инициализация графика"""
@@ -354,7 +326,6 @@ class MainUI(QMainWindow):
         self.plot_widget.setLabel('left', 'Проекция момента (В⋅с⋅м)')
         self.plot_widget.setLabel('bottom', 'Угол (°)')
         self.plot_widget.showGrid(x=True, y=True)
-
 
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
@@ -411,7 +382,7 @@ class MainUI(QMainWindow):
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
         try:
-            with (serial.Serial(port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=None)) as serialData:
+            with (serial.Serial(port=self.sensor_port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=None)) as serialData:
                 # Read data from Sensor
                 command = f'R{SENSOR_SERIAL_BAUDSPEED};{DATA_READ_SIZE}\n'
                 # Send the command to the DataPort
@@ -442,7 +413,7 @@ class MainUI(QMainWindow):
             rev=False          # Прямой порядок битов (normal)
         )
         try:
-            with (serial.Serial(port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1)) as serialData:
+            with (serial.Serial(port=self.sensor_port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1)) as serialData:
                 for i in range(0, DATA_READ_SIZE, DATA_READ_SIZE_STEP):
 
                     command = f'S{i};{DATA_READ_SIZE_STEP}\n'
@@ -472,20 +443,11 @@ class MainUI(QMainWindow):
             self.on_data_received(ADC, EDC)
             self.on_get_data_finished()
         else:
-            QMessageBox.warning(self, "Считывание", "Недостаточно данные с датчика не совпадают с данными энкодера. Проверьте подключение.")
-
-        
-        # self.serial_worker = SerialWorker(port=self.sensor_port, command='S', timeout=46, read_size=DATA_READ_SIZE)
-        # self.serial_worker.data_ready.connect(self.on_data_received)
-        # self.serial_worker.error.connect(self.on_serial_error)
-        # self.serial_worker.finished.connect(self.on_get_data_finished)
-        # self.serial_worker.start()
+            QMessageBox.warning(self, "Считывание", "Данные с датчика не совпадают с данными энкодера. Проверьте подключение.")
     
     def on_data_received(self, ADC, EDC):
         """Обработка полученных данных"""
         try:
-            if len(raw_data) != DATA_READ_SIZE:
-                QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика. Проверьте подключение.")
             df_raw = self.data_processor.process_raw_data(ADC, EDC)
             df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
@@ -542,7 +504,7 @@ class MainUI(QMainWindow):
         if file_path:
             if type == "Текст (*.txt)":
                 result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.1f}°, азимут φ: {phase_xy:.1f}°"
-                full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
+                full_content = f"{header_text}\n{result_line}\n" + "=" * 80 + "\n"
 
                 try:
                     # Если файл уже существует — добавляем в начало, иначе создаём новый
@@ -562,10 +524,10 @@ class MainUI(QMainWindow):
                         # Подготавливаем строку данных
                         header_text = self.txtEd_FileHeader.toPlainText().strip().replace('\n', ' | ').replace(',', ';')  # убираем переносы и запятые
                         new_row = pd.DataFrame([{
-                            "Магнит": header_text,
                             "Момент": amplitude,
                             "Угол": theta_deg,
-                            "Азимут": phase_xy
+                            "Азимут": phase_xy,
+                            "Магнит": header_text
                         }])
 
                         # Проверяем, существует ли файл
