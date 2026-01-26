@@ -5,18 +5,20 @@ MOTOR_DISTANCE_FACTOR = 1000/9  # Фактор расстояния для ко�
 MOTOR_DEFAULT_SPEED = 100       # Скорость мотора по умолчанию
 
 # Параметры соединения
-SENSOR_SERIAL_BAUDRATE = 3000000
+SENSOR_SERIAL_BAUDRATE = 2000000
+SENSOR_SERIAL_BAUDSPEED = 100000 # количество выборок/c, целое от 1 до 300000
 MOTOR_SERIAL_BAUDRATE = 57600
 MOTOR_SERIAL_PARITY = 'N'
 MOTOR_SERIAL_STOPBITS = 1
 MOTOR_SERIAL_BYTESIZE = 8
 MOTOR_SERIAL_TIMEOUT = 0
-DATA_READ_SIZE = 4194304  # Размер данных для чтения с датчика (в байтах)
+DATA_READ_SIZE = 250000  # Размер данных для чтения с датчика (в байтах)
+DATA_READ_SIZE_STEP = 1000  # Размер окна данных для чтения с датчика (в байтах)
 
 # Параметры калибровки/пересчета
 ADC_VOLT_REFERENCE = 2.5        # Опорное напряжение АЦП [В]
 ADC_BIT_COUNT = 32767           # Максимальное значение АЦП (±16 бит)
-TIMEBASE_CONSTANT = 96937       # Постоянная времени системы [мкс]
+TIMEBASE_CONSTANT = 100000       # Постоянная времени системы [мкс]
 COIL_CONSTANT = 1144.8          # Постоянная катушки [1/м]
 ENCODER_PULSES_PER_REV = 10000  # Количество импульсов энкодера на оборот
 
@@ -53,8 +55,8 @@ class SerialWorker(QThread):
         
     def run(self):
         try:
-            with serial.Serial(self.port, baudrate=921600, bytesize=8, 
-                             stopbits=1, timeout=self.timeout) as serial_conn:
+            with serial.Serial(self.port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
+                             stopbits=MOTOR_SERIAL_STOPBITS, timeout=self.timeout) as serial_conn:
                 serial_conn.write(self.command.encode())
 
                 if self.read_size:
@@ -71,16 +73,14 @@ class DataProcessor:
     """Класс для обработки данных"""
     
     @staticmethod
-    def process_raw_data(raw_data: bytes) -> pd.DataFrame:
+    def process_raw_data(ADC: bytes, EDC: bytes) -> pd.DataFrame:
         """Перевод байтовой строки в числа"""
-        rawdata = np.frombuffer(raw_data, dtype=np.uint8)
+        rawADC = np.frombuffer(ADC, dtype=np.uint8)
+        rawEDC = np.frombuffer(EDC, dtype=np.uint8)
 
-        raw_signal = rawdata[:2097152]
         # Чтение по два байта (старший-младший) в нотации "big-endian" с переводом в нотацию компилятора (little-endian)
-        data = raw_signal.view(dtype='>i2').astype(np.int16)
-
-        raw_encoder = rawdata[2097152:]
-        encoder = raw_encoder.view(dtype='>i2').astype(np.int16)
+        data = rawADC.view(dtype='>i2').astype(np.int16)
+        encoder = rawEDC.view(dtype='>i2').astype(np.int16)
 
         return pd.DataFrame({'encoder': encoder, 'data': data})
     
@@ -275,7 +275,7 @@ class MainUI(QMainWindow):
         self.motor_controller = MotorController()
         self.measurement_manager = MeasurementManager()
 
-        self.motor_speed = 100
+        self.motor_speed = MOTOR_DEFAULT_SPEED
         
         self.init_ui()
         self.init_graph()
@@ -339,7 +339,7 @@ class MainUI(QMainWindow):
             self.cBox_SensorPort.addItem(port.device)
         
         if self.cBox_MotorPort.count() > 1:
-            self.cBox_MotorPort.setCurrentIndex(1)
+            self.cBox_MotorPort.setCurrentIndex(1) # TODO Определение порта по ответу
         if self.cBox_SensorPort.count() > 0:
             self.cBox_SensorPort.setCurrentIndex(0)
 
@@ -348,15 +348,13 @@ class MainUI(QMainWindow):
         self.plot_widget = pg.PlotWidget(self)
         self.chartLayout.addWidget(self.plot_widget)
 
-        # (Опционально) Настраиваем внешний вид
+        # Настраиваем внешний вид
         self.plot_widget.setBackground('w') # Белый фон
         # self.plot_widget.setTitle("Проекция момента")
         self.plot_widget.setLabel('left', 'Проекция момента (В⋅с⋅м)')
         self.plot_widget.setLabel('bottom', 'Угол (°)')
         self.plot_widget.showGrid(x=True, y=True)
 
-        # Серия данных будет храниться как объект внутри класса
-        # self.graph_plot = None # Инициализируем переменную для графика
 
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
@@ -412,11 +410,20 @@ class MainUI(QMainWindow):
     
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
-        self.serial_worker = SerialWorker(port=self.sensor_port, command='R', timeout=11)
-        self.serial_worker.finished.connect(self.on_read_sensor_finished)
-        self.serial_worker.error.connect(self.on_serial_error)
-        self.serial_worker.start()
-    
+        try:
+            with (serial.Serial(port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=None)) as serialData:
+                # Read data from Sensor
+                command = f'R{SENSOR_SERIAL_BAUDSPEED};{DATA_READ_SIZE}\n'
+                # Send the command to the DataPort
+                serialData.write(command.encode())
+                dataRead = serialData.readline()
+                dataReady = serialData.readline()
+        except Exception as e:
+            self.on_serial_error(f"Ошибка чтения датчика: {str(e)}")
+        if dataReady == b'1\n':
+            TIMEBASE_CONSTANT = int(float(dataRead.decode().split('F=')[1].split()[0].replace(',','.'))*1000)  # Постоянная времени системы [мкс]
+            self.on_read_sensor_finished()
+
     def on_read_sensor_finished(self):
         """Обработка завершения чтения датчика"""
         self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
@@ -425,18 +432,61 @@ class MainUI(QMainWindow):
     
     def get_data(self):
         """Получение данных после чтения датчика"""
-        self.serial_worker = SerialWorker(port=self.sensor_port, command='S', timeout=46, read_size=DATA_READ_SIZE)
-        self.serial_worker.data_ready.connect(self.on_data_received)
-        self.serial_worker.error.connect(self.on_serial_error)
-        self.serial_worker.finished.connect(self.on_get_data_finished)
-        self.serial_worker.start()
+        ADC = b''
+        EDC = b''
+        # Создаём объект CRC-16-CCITT-ZERO
+        crc16_func = crcmod.mkCrcFun(
+            poly=0x11021,      # Полином: x^16 + x^12 + x^5 + 1 (0x1021, но с битом переноса)
+            initCrc=0x0000,  # Начальное значение — 0x0000 (ZERO)
+            xorOut=0x0000,   # Окончательный XOR — 0x0000
+            rev=False          # Прямой порядок битов (normal)
+        )
+        try:
+            with (serial.Serial(port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1)) as serialData:
+                for i in range(0, DATA_READ_SIZE, DATA_READ_SIZE_STEP):
+
+                    command = f'S{i};{DATA_READ_SIZE_STEP}\n'
+                    serialData.write(command.encode())
+
+                    lineADC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                    dataADC = lineADC[6:-3]
+                    crcADC = lineADC[-3:-1]
+                    if crc16_func(dataADC) != int.from_bytes(crcADC, 'big'):
+                        self.on_serial_error(f"Ошибка контрольной суммы данных датчика")
+                        print('DataADC not ok')
+                    else:
+                        ADC += dataADC
+
+                    lineEDC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                    dataEDC = lineEDC[6:-3]
+                    crcEDC = lineEDC[-3:-1]
+                    if crc16_func(dataEDC) != int.from_bytes(crcEDC, 'big'):
+                        self.on_serial_error(f"Ошибка контрольной суммы данных энкодера")
+                        print('DataEDC not ok')
+                    else:
+                        EDC += dataEDC
+        except Exception as e:
+            self.on_serial_error(f"Ошибка cчитывания данных с порта датчика: {str(e)}")
+
+        if len(ADC) == len(EDC):
+            self.on_data_received(ADC, EDC)
+            self.on_get_data_finished()
+        else:
+            QMessageBox.warning(self, "Считывание", "Недостаточно данные с датчика не совпадают с данными энкодера. Проверьте подключение.")
+
+        
+        # self.serial_worker = SerialWorker(port=self.sensor_port, command='S', timeout=46, read_size=DATA_READ_SIZE)
+        # self.serial_worker.data_ready.connect(self.on_data_received)
+        # self.serial_worker.error.connect(self.on_serial_error)
+        # self.serial_worker.finished.connect(self.on_get_data_finished)
+        # self.serial_worker.start()
     
-    def on_data_received(self, raw_data):
+    def on_data_received(self, ADC, EDC):
         """Обработка полученных данных"""
         try:
             if len(raw_data) != DATA_READ_SIZE:
                 QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика. Проверьте подключение.")
-            df_raw = self.data_processor.process_raw_data(raw_data)
+            df_raw = self.data_processor.process_raw_data(ADC, EDC)
             df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
             self.df = self.data_processor.integrate_df(df_truncated)
