@@ -857,6 +857,9 @@ QPushButton:pressed {
     </rect>
    </property>
    <widget class="QMenu" name="menu">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="title">
      <string>Меню</string>
     </property>

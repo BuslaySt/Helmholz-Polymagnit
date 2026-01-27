@@ -1,22 +1,20 @@
 # --- НАЧАЛО: Пользовательские переменные ---
 # Параметры вращения мотора
-MOTOR_REVOLUTIONS = 26          # Количество оборотов мотора за измерение
-MOTOR_DISTANCE_FACTOR = 1000/9  # Фактор расстояния для команды мотора
+MOTOR_REVOLUTIONS = 15          # Количество оборотов мотора за измерение
+MOTOR_DISTANCE_FACTOR = 115     # Фактор расстояния на один оборот мотора
 MOTOR_DEFAULT_SPEED = 100       # Скорость мотора по умолчанию
 
 # Параметры соединения
-SENSOR_SERIAL_BAUDRATE = 921600
 MOTOR_SERIAL_BAUDRATE = 57600
-MOTOR_SERIAL_PARITY = 'N'
-MOTOR_SERIAL_STOPBITS = 1
-MOTOR_SERIAL_BYTESIZE = 8
-MOTOR_SERIAL_TIMEOUT = 0
-DATA_READ_SIZE = 4194304  # Размер данных для чтения с датчика (в байтах)
+SENSOR_SERIAL_BAUDRATE = 2000000
+SENSOR_SERIAL_BAUDSPEED = 100000 # количество выборок/c, целое от 1 до 300000
+DATA_READ_SIZE = 400000  # Размер данных для чтения с датчика (в байтах)
+DATA_READ_SIZE_STEP = 1000  # Размер окна данных для чтения с датчика (в байтах)
 
 # Параметры калибровки/пересчета
 ADC_VOLT_REFERENCE = 2.5        # Опорное напряжение АЦП [В]
 ADC_BIT_COUNT = 32767           # Максимальное значение АЦП (±16 бит)
-TIMEBASE_CONSTANT = 96937       # Постоянная времени системы [мкс]
+TIMEBASE_CONSTANT = 100000       # Постоянная времени системы [мкс]
 COIL_CONSTANT = 1144.8          # Постоянная катушки [1/м]
 ENCODER_PULSES_PER_REV = 10000  # Количество импульсов энкодера на оборот
 
@@ -37,31 +35,40 @@ import numpy as np
 import fastgoertzel as fg
 from scipy import integrate
 from scipy.signal import argrelextrema, medfilt
+import crcmod
 
 class SerialWorker(QThread):
     """Поток для выполнения операций с последовательным портом"""
     finished = pyqtSignal()
     error = pyqtSignal(str)
     data_ready = pyqtSignal(bytes)
-    
-    def __init__(self, port, command, timeout, read_size=None):
+    response_ready = pyqtSignal(object)  # Может передавать строку или None
+
+    def __init__(self, port, baudrate, timeout, command, read_size=None, read_response=False):
         super().__init__()
         self.port = port
+        self.baudrate = baudrate
         self.command = command
         self.timeout = timeout
         self.read_size = read_size
-        
+        self.read_response = read_response # Новый параметр
+
     def run(self):
         try:
-            with serial.Serial(self.port, baudrate=921600, bytesize=8, 
-                             stopbits=1, timeout=self.timeout) as serial_conn:
+            with serial.Serial(self.port, baudrate=self.baudrate, bytesize=8,
+                               stopbits=1, timeout=self.timeout) as serial_conn:
                 serial_conn.write(self.command.encode())
-
+                # Читаем ответ только если read_response=True или задан read_size
                 if self.read_size:
                     raw_data = serial_conn.read(self.read_size)
                     self.data_ready.emit(raw_data)
+                elif self.read_response:
+                    response = serial_conn.readline()
+                    self.response_ready.emit(response)
                 else:
-                    time.sleep(self.timeout)
+                    # Команда отправлена, ответ не нужен (например, для мотора)
+                    self.response_ready.emit(None) # Или можно просто emit finished
+
         except Exception as e:
             self.error.emit(f"Ошибка последовательного порта: {str(e)}")
         finally:
@@ -71,16 +78,14 @@ class DataProcessor:
     """Класс для обработки данных"""
     
     @staticmethod
-    def process_raw_data(raw_data: bytes) -> pd.DataFrame:
+    def process_raw_data(ADC: bytes, EDC: bytes) -> pd.DataFrame:
         """Перевод байтовой строки в числа"""
-        rawdata = np.frombuffer(raw_data, dtype=np.uint8)
+        rawADC = np.frombuffer(ADC, dtype=np.uint8)
+        rawEDC = np.frombuffer(EDC, dtype=np.uint8)
 
-        raw_signal = rawdata[:2097152]
         # Чтение по два байта (старший-младший) в нотации "big-endian" с переводом в нотацию компилятора (little-endian)
-        data = raw_signal.view(dtype='>i2').astype(np.int16)
-
-        raw_encoder = rawdata[2097152:]
-        encoder = raw_encoder.view(dtype='>i2').astype(np.int16)
+        data = rawADC.view(dtype='>i2').astype(np.int16)
+        encoder = rawEDC.view(dtype='>i2').astype(np.int16)
 
         return pd.DataFrame({'encoder': encoder, 'data': data})
     
@@ -101,7 +106,7 @@ class DataProcessor:
         """Отсечение целых оборотов по переходу нуля энкодера"""
         # Найти индексы, где энкодер "прыгнул"
         diff_enc = df['encoder'].shift(1) - df['encoder']
-        split_points = df.index[diff_enc.abs() > 1000]  # по модулю, чтобы не зависить от направления (?)
+        split_points = df.index[diff_enc.abs() > 1000]  # по модулю, чтобы не зависеть от направления
 
         # print(f'Найдено {len(split_points)-1} периодов энкодера')
 
@@ -122,19 +127,14 @@ class DataProcessor:
     def integrate_df(df_trimmed: pd.DataFrame) -> pd.DataFrame:
         """Полное интегрирование данных - основной метод"""
         # Усредняем по значениям encoder и вычисляем интеграл по всему периоду данных
-        # 1. Группировка по периодам (непрерывные одинаковые значения encoder)
+        # 1. Группировка по одинаковым значениям encoder
         df_trimmed['period'] = (df_trimmed['encoder'] != df_trimmed['encoder'].shift()).cumsum()
 
         # 2. Группируем по периоду, затем вычисляем среднее, после чего сбрасываем индекс и период
         df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first', 'period': 'first'}).reset_index(drop=True)
 
-        # 3.1 Интеграл (кумулятивная сумма)
+        # 3 Интеграл (кумулятивная сумма)
         df_res['integral'] = -1.0*df_res.data.cumsum()
-
-        # 3.2 Интеграл (трапециями по единичному отрезку)
-        # dt = 1
-        # минус из формулы интегрирования
-        # df_res['integral'] = -1.0 * integrate.cumulative_trapezoid(df_res['data'], dx=dt, initial=0)
 
         # 4. Пересчет в Вольты*метры*секунды
         #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
@@ -166,23 +166,23 @@ class DataProcessor:
     def get_amplitude(df: pd.DataFrame) -> tuple:
         """Вычисление амплитуды алгоритмом Гёрцеля"""
         norm_freq = 1 / ENCODER_PULSES_PER_REV
-        f_amp, f_phase = fg.goertzel(df.detrend.values, norm_freq)
+        f_amp, f_phase = fg.goertzel(df['detrend'].values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
         f_phase_deg = np.degrees(f_phase+np.pi/2)
 
         return (f_amp, f_phase+np.pi/2, f_phase_deg)
 
-class MotorController:
+class MotorController: #TODO Перенести в SerialWorker
     """Класс для управления мотором"""
     
     @staticmethod
-    def run_motor(port, revolutions=MOTOR_REVOLUTIONS, distance=MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
+    def run_motor(port, distance=MOTOR_REVOLUTIONS*MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
         """Запуск мотора на определенное количество оборотов"""
         try:
-            with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
-                             parity=MOTOR_SERIAL_PARITY, stopbits=MOTOR_SERIAL_STOPBITS, timeout=MOTOR_SERIAL_TIMEOUT) as serial_conn:
+            with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, 
+                             parity='N', stopbits=1, timeout=0) as serial_conn:
                 
-                command = f'ON\rMOVE L(-{int(revolutions * distance)})F({int(speed)})\rOFF\r' # MOVE L(2888)F(100)
+                command = f'ON\rMOVE L(-{int(distance)})F({int(speed)})\rOFF\r' # MOVE L(15*115)F(100)
                 return serial_conn.write(command.encode("utf-8"))
 
         except Exception as e:
@@ -239,10 +239,10 @@ class MeasurementManager:
         if len(self.measurements) != 3:
             return None
         
-        # Извлекаем амплитуды из всех трех измерений
+        # Извлекаем амплитуды из всех трех измерений и сортируем
         sorted_results = sorted([m for m in self.measurements], key = lambda measure: measure['amplitude'])
         
-        # Вычисляем финальный результат по формуле
+        # Вычисляем финальный результат модуля амплитуды
         sum_of_squares = sum(result['amplitude']**2 for result in sorted_results) / 2
         final_amplitude = np.sqrt(sum_of_squares)
         
@@ -251,13 +251,14 @@ class MeasurementManager:
         M_yz = sorted_results[1]['amplitude']
         M_zx = sorted_results[2]['amplitude']
 
-        phase_xy = sorted_results[0]['phase']
-
         theta_rad = np.arctan(M_xy / (np.sqrt(M_yz**2 + M_zx**2 - M_xy**2)/2))
         theta_deg = np.degrees(theta_rad)
-        
+
+        # Фаза проекции момента магнита на плоскость xy
+        phase_xy = sorted_results[0]['phase']
+
         return (final_amplitude, theta_deg, phase_xy)
-    
+
 class MainUI(QMainWindow):
     def __init__(self):
         super(MainUI, self).__init__()
@@ -271,7 +272,7 @@ class MainUI(QMainWindow):
         self.motor_controller = MotorController()
         self.measurement_manager = MeasurementManager()
 
-        self.motor_speed = 100
+        self.motor_speed = MOTOR_DEFAULT_SPEED
         
         self.init_ui()
         self.init_graph()
@@ -332,27 +333,57 @@ class MainUI(QMainWindow):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             self.cBox_MotorPort.addItem(port.device)
-            self.cBox_SensorPort.addItem(port.device)
-        
-        if self.cBox_MotorPort.count() > 1:
-            self.cBox_MotorPort.setCurrentIndex(1)
-        if self.cBox_SensorPort.count() > 0:
-            self.cBox_SensorPort.setCurrentIndex(0)
 
+            # self.serial_sensor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
+            # self.serial_sensor.data_ready.connect(self.on_data_received)
+            # self.serial_sensor.finished.connect(self.on_read_sensor_finished)
+            # self.serial_sensor.error.connect(self.on_serial_error)
+            # self.serial_sensor.start()
+
+            # self.serial_motor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
+            # self.serial_motor.data_ready.connect(self.on_data_received)
+            # self.serial_motor.finished.connect(self.on_read_sensor_finished)
+            # self.serial_motor.error.connect(self.on_serial_error)
+            # self.serial_motor.start()
+
+            try:
+                with serial.Serial(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, parity='N', stopbits=1, timeout=1) as serialData:
+                    
+                    command = 'ON\SHOW inp1\rOFF\r' # SHOW inp1 - выводит состояние входа inp1 контроллера двигателя
+                    serialData.write(command.encode("utf-8"))
+                    motor_answer = serialData.readline()
+                    if motor_answer:
+                        self.motor_port = port.device
+                        self.cBox_MotorPort.setCurrentText(port.device)
+            except Exception as e:
+                self.on_serial_error(f"Ошибка чтения порта мотора: {str(e)}")
+            
+            self.cBox_SensorPort.addItem(port.device)
+            try:
+                with serial.Serial(port=port.device, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1) as serialData:
+                    # Read data from Sensor
+                    command = 'R0;1\n'
+                    # Send the command to the DataPort
+                    serialData.write(command.encode())
+                    dataRead = serialData.readline()
+                    dataReady = serialData.readline()
+                    if dataReady == b'1\n':
+                        self.sensor_port = port.device
+                        self.cBox_SensorPort.setCurrentText(port.device)
+            except Exception as e:
+                self.on_serial_error(f"Ошибка чтения порта датчика: {str(e)}")
+              
     def init_graph(self):
         """Инициализация графика"""
         self.plot_widget = pg.PlotWidget(self)
         self.chartLayout.addWidget(self.plot_widget)
 
-        # (Опционально) Настраиваем внешний вид
+        # Настраиваем внешний вид
         self.plot_widget.setBackground('w') # Белый фон
         # self.plot_widget.setTitle("Проекция момента")
         self.plot_widget.setLabel('left', 'Проекция момента (В⋅с⋅м)')
         self.plot_widget.setLabel('bottom', 'Угол (°)')
         self.plot_widget.showGrid(x=True, y=True)
-
-        # Серия данных будет храниться как объект внутри класса
-        # self.graph_plot = None # Инициализируем переменную для графика
 
     def update_buttons_state(self, enabled):
         """Обновление состояния кнопок"""
@@ -408,31 +439,70 @@ class MainUI(QMainWindow):
     
     def read_sensor(self):
         """Чтение датчика после запуска мотора"""
-        self.serial_worker = SerialWorker(port=self.sensor_port, command='R', timeout=11)
-        self.serial_worker.finished.connect(self.on_read_sensor_finished)
-        self.serial_worker.error.connect(self.on_serial_error)
-        self.serial_worker.start()
-    
-    def on_read_sensor_finished(self):
-        """Обработка завершения чтения датчика"""
-        self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
-        QTimer.singleShot(500, self.get_data)
-        
+        try:
+            with (serial.Serial(port=self.sensor_port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=None)) as serialData:
+                # Read data from Sensor
+                command = f'R{SENSOR_SERIAL_BAUDSPEED};{DATA_READ_SIZE}\n'
+                # Send the command to the DataPort
+                serialData.write(command.encode())
+                dataRead = serialData.readline()
+                dataReady = serialData.readline()
+        except Exception as e:
+            self.on_serial_error(f"Ошибка чтения датчика: {str(e)}")
+        if dataReady == b'1\n':
+            TIMEBASE_CONSTANT = int(float(dataRead.decode().split('F=')[1].split()[0].replace(',','.'))*1000)  # Постоянная времени системы [мкс]
+            self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
+            QTimer.singleShot(500, self.get_data)
     
     def get_data(self):
         """Получение данных после чтения датчика"""
-        self.serial_worker = SerialWorker(port=self.sensor_port, command='S', timeout=46, read_size=DATA_READ_SIZE)
-        self.serial_worker.data_ready.connect(self.on_data_received)
-        self.serial_worker.error.connect(self.on_serial_error)
-        self.serial_worker.finished.connect(self.on_get_data_finished)
-        self.serial_worker.start()
+        ADC = b''
+        EDC = b''
+        # Создаём объект CRC-16-CCITT-ZERO
+        crc16_func = crcmod.mkCrcFun(
+            poly=0x11021,      # Полином: x^16 + x^12 + x^5 + 1 (0x1021, но с битом переноса)
+            initCrc=0x0000,  # Начальное значение — 0x0000 (ZERO)
+            xorOut=0x0000,   # Окончательный XOR — 0x0000
+            rev=False          # Прямой порядок битов (normal)
+        )
+        try:
+            with (serial.Serial(port=self.sensor_port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1)) as serialData:
+                for i in range(0, DATA_READ_SIZE, DATA_READ_SIZE_STEP):
+
+                    command = f'S{i};{DATA_READ_SIZE_STEP}\n'
+                    serialData.write(command.encode())
+
+                    lineADC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                    dataADC = lineADC[6:-3]
+                    crcADC = lineADC[-3:-1]
+                    if crc16_func(dataADC) != int.from_bytes(crcADC, 'big'):
+                        self.on_serial_error(f"Ошибка контрольной суммы данных датчика")
+                        print('DataADC not ok')
+                    else:
+                        ADC += dataADC
+
+                    lineEDC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                    dataEDC = lineEDC[6:-3]
+                    crcEDC = lineEDC[-3:-1]
+                    if crc16_func(dataEDC) != int.from_bytes(crcEDC, 'big'):
+                        self.on_serial_error(f"Ошибка контрольной суммы данных энкодера")
+                        print('DataEDC not ok')
+                    else:
+                        EDC += dataEDC
+        except Exception as e:
+            self.on_serial_error(f"Ошибка cчитывания данных с порта датчика: {str(e)}")
+
+        if len(ADC) == len(EDC):
+            self.on_data_received(ADC, EDC)
+            # После завершения измерения спрашиваем пользователя
+            self.ask_measurement_action()
+        else:
+            QMessageBox.warning(self, "Считывание", "Данные с датчика не совпадают с данными энкодера. Проверьте подключение.")
     
-    def on_data_received(self, raw_data):
+    def on_data_received(self, ADC, EDC):
         """Обработка полученных данных"""
         try:
-            if len(raw_data) != DATA_READ_SIZE:
-                QMessageBox.warning(self, "Считывание", "Недостаточно данных с датчика. Проверьте подключение.")
-            df_raw = self.data_processor.process_raw_data(raw_data)
+            df_raw = self.data_processor.process_raw_data(ADC, EDC)
             df_filtered = self.data_processor.apply_median_filter(df_raw, window_size=3)
             df_truncated = self.data_processor.truncate_marginal_periods(df_filtered)
             self.df = self.data_processor.integrate_df(df_truncated)
@@ -455,11 +525,6 @@ class MainUI(QMainWindow):
 
         except Exception as e:
             self.on_serial_error(f"Ошибка обработки данных: {str(e)}")
-    
-    def on_get_data_finished(self):
-        """Обработка завершения получения данных"""
-        # После завершения измерения спрашиваем пользователя
-        self.ask_measurement_action()
 
     def save_data(self):
         """Сохраняет заголовок и результат измерения в выбранный пользователем файл."""
@@ -488,7 +553,7 @@ class MainUI(QMainWindow):
         if file_path:
             if type == "Текст (*.txt)":
                 result_line = f"Полный момент: {amplitude:.3e} [Вб⋅м]; Отклонение от нормали θz: {theta_deg:.1f}°, азимут φ: {phase_xy:.1f}°"
-                full_content = f"{header_text}\n{result_line}\n" + "=" * 60 + "\n"
+                full_content = f"{header_text}\n{result_line}\n" + "=" * 80 + "\n"
 
                 try:
                     # Если файл уже существует — добавляем в начало, иначе создаём новый
@@ -508,10 +573,10 @@ class MainUI(QMainWindow):
                         # Подготавливаем строку данных
                         header_text = self.txtEd_FileHeader.toPlainText().strip().replace('\n', ' | ').replace(',', ';')  # убираем переносы и запятые
                         new_row = pd.DataFrame([{
-                            "Магнит": header_text,
                             "Момент": amplitude,
                             "Угол": theta_deg,
-                            "Азимут": phase_xy
+                            "Азимут": phase_xy,
+                            "Магнит": header_text
                         }])
 
                         # Проверяем, существует ли файл
