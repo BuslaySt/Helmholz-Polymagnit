@@ -5,13 +5,9 @@ MOTOR_DISTANCE_FACTOR = 115     # Фактор расстояния на оди�
 MOTOR_DEFAULT_SPEED = 100       # Скорость мотора по умолчанию
 
 # Параметры соединения
+MOTOR_SERIAL_BAUDRATE = 57600
 SENSOR_SERIAL_BAUDRATE = 2000000
 SENSOR_SERIAL_BAUDSPEED = 100000 # количество выборок/c, целое от 1 до 300000
-MOTOR_SERIAL_BAUDRATE = 57600
-MOTOR_SERIAL_PARITY = 'N'
-MOTOR_SERIAL_STOPBITS = 1
-MOTOR_SERIAL_BYTESIZE = 8
-MOTOR_SERIAL_TIMEOUT = 0
 DATA_READ_SIZE = 400000  # Размер данных для чтения с датчика (в байтах)
 DATA_READ_SIZE_STEP = 1000  # Размер окна данных для чтения с датчика (в байтах)
 
@@ -73,7 +69,7 @@ class DataProcessor:
         """Отсечение целых оборотов по переходу нуля энкодера"""
         # Найти индексы, где энкодер "прыгнул"
         diff_enc = df['encoder'].shift(1) - df['encoder']
-        split_points = df.index[diff_enc.abs() > 1000]  # по модулю, чтобы не зависить от направления (?)
+        split_points = df.index[diff_enc.abs() > 1000]  # по модулю, чтобы не зависеть от направления
 
         # print(f'Найдено {len(split_points)-1} периодов энкодера')
 
@@ -94,19 +90,14 @@ class DataProcessor:
     def integrate_df(df_trimmed: pd.DataFrame) -> pd.DataFrame:
         """Полное интегрирование данных - основной метод"""
         # Усредняем по значениям encoder и вычисляем интеграл по всему периоду данных
-        # 1. Группировка по периодам (непрерывные одинаковые значения encoder)
+        # 1. Группировка по одинаковым значениям encoder
         df_trimmed['period'] = (df_trimmed['encoder'] != df_trimmed['encoder'].shift()).cumsum()
 
         # 2. Группируем по периоду, затем вычисляем среднее, после чего сбрасываем индекс и период
         df_res = df_trimmed.groupby('period').agg({'data': 'sum', 'encoder': 'first', 'period': 'first'}).reset_index(drop=True)
 
-        # 3.1 Интеграл (кумулятивная сумма)
+        # 3 Интеграл (кумулятивная сумма)
         df_res['integral'] = -1.0*df_res.data.cumsum()
-
-        # 3.2 Интеграл (трапециями по единичному отрезку)
-        # dt = 1
-        # минус из формулы интегрирования
-        # df_res['integral'] = -1.0 * integrate.cumulative_trapezoid(df_res['data'], dx=dt, initial=0)
 
         # 4. Пересчет в Вольты*метры*секунды
         #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
@@ -138,7 +129,7 @@ class DataProcessor:
     def get_amplitude(df: pd.DataFrame) -> tuple:
         """Вычисление амплитуды алгоритмом Гёрцеля"""
         norm_freq = 1 / ENCODER_PULSES_PER_REV
-        f_amp, f_phase = fg.goertzel(df.detrend.values, norm_freq)
+        f_amp, f_phase = fg.goertzel(df['detrend'].values, norm_freq)
         # сдвиг рассчитанной фазы на +π/2 и перевод в градусы
         f_phase_deg = np.degrees(f_phase+np.pi/2)
 
@@ -151,10 +142,10 @@ class MotorController:
     def run_motor(port, distance=MOTOR_REVOLUTIONS*MOTOR_DISTANCE_FACTOR, speed=MOTOR_DEFAULT_SPEED):
         """Запуск мотора на определенное количество оборотов"""
         try:
-            with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=MOTOR_SERIAL_BYTESIZE, 
-                             parity=MOTOR_SERIAL_PARITY, stopbits=MOTOR_SERIAL_STOPBITS, timeout=MOTOR_SERIAL_TIMEOUT) as serial_conn:
+            with serial.Serial(port, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, 
+                             parity='N', stopbits=1, timeout=0) as serial_conn:
                 
-                command = f'ON\rMOVE L(-{int(distance)})F({int(speed)})\rOFF\r' # MOVE L(2888)F(100)
+                command = f'ON\rMOVE L(-{int(distance)})F({int(speed)})\rOFF\r' # MOVE L(15*115)F(100)
                 return serial_conn.write(command.encode("utf-8"))
 
         except Exception as e:
@@ -211,10 +202,10 @@ class MeasurementManager:
         if len(self.measurements) != 3:
             return None
         
-        # Извлекаем амплитуды из всех трех измерений
+        # Извлекаем амплитуды из всех трех измерений и сортируем
         sorted_results = sorted([m for m in self.measurements], key = lambda measure: measure['amplitude'])
         
-        # Вычисляем финальный результат по формуле
+        # Вычисляем финальный результат модуля амплитуды
         sum_of_squares = sum(result['amplitude']**2 for result in sorted_results) / 2
         final_amplitude = np.sqrt(sum_of_squares)
         
@@ -223,16 +214,17 @@ class MeasurementManager:
         M_yz = sorted_results[1]['amplitude']
         M_zx = sorted_results[2]['amplitude']
 
-        phase_xy = sorted_results[0]['phase']
-
         theta_rad = np.arctan(M_xy / (np.sqrt(M_yz**2 + M_zx**2 - M_xy**2)/2))
         theta_deg = np.degrees(theta_rad)
-        
+
+        # Фаза проекции момента магнита на плоскость xy
+        phase_xy = sorted_results[0]['phase']
+
         return (final_amplitude, theta_deg, phase_xy)
     
-    def get_individual_results(self):
-        """Получить результаты отдельных измерений"""
-        return self.measurements.copy()
+    # def get_individual_results(self): TODO Удалить
+    #     """Получить результаты отдельных измерений"""
+    #     return self.measurements.copy()
 
 class MainUI(QMainWindow):
     def __init__(self):
@@ -308,12 +300,34 @@ class MainUI(QMainWindow):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             self.cBox_MotorPort.addItem(port.device)
+            try:
+                with serial.Serial(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, parity='N', stopbits=1, timeout=1) as serialData:
+                    
+                    command = f'ON\SHOW inp1\rOFF\r' # SHOW inp1 - выводит состояние входа inp1 контроллера двигателя
+                    serialData.write(command.encode("utf-8"))
+                    motor_answer = serialData.readline()
+                    if motor_answer:
+                        self.motor_port = port.device
+                        self.cBox_MotorPort.setCurrentText(port.device)
+            except Exception as e:
+                self.on_serial_error(f"Ошибка чтения порта мотора: {str(e)}")
+            
             self.cBox_SensorPort.addItem(port.device)
-        
-        if self.cBox_MotorPort.count() > 1:
-            self.cBox_MotorPort.setCurrentIndex(0) # TODO Определение порта по ответу
-        if self.cBox_SensorPort.count() > 0:
-            self.cBox_SensorPort.setCurrentIndex(1)
+            try:
+                with serial.Serial(port=port.device, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1) as serialData:
+                    # Read data from Sensor
+                    command = f'R0;1\n'
+                    # Send the command to the DataPort
+                    serialData.write(command.encode())
+                    dataRead = serialData.readline()
+                    dataReady = serialData.readline()
+                    if dataReady == b'1\n':
+                        self.sensor_port = port.device
+                        self.cBox_SensorPort.setCurrentText(port.device)
+            except Exception as e:
+                self.on_serial_error(f"Ошибка чтения порта датчика: {str(e)}")
+              
+
 
     def init_graph(self):
         """Инициализация графика"""
