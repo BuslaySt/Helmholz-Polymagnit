@@ -303,7 +303,7 @@ class MainUI(QMainWindow):
             try:
                 with serial.Serial(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, parity='N', stopbits=1, timeout=1) as serialData:
                     
-                    command = f'ON\SHOW inp1\rOFF\r' # SHOW inp1 - выводит состояние входа inp1 контроллера двигателя
+                    command = f'ON\rSHOW inp1\rOFF\r' # SHOW inp1 - выводит состояние входа inp1 контроллера двигателя
                     serialData.write(command.encode("utf-8"))
                     motor_answer = serialData.readline()
                     if motor_answer:
