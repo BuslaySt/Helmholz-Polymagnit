@@ -22,23 +22,20 @@ ENCODER_PULSES_PER_REV = 10000  # Количество импульсов энк
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox
-# from PyQt5.QtChart import QChart, QChartView, QLineSeries
-import pyqtgraph as pg
-# from pyqtgraph import PlotWidget
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
-import sys, time, os, datetime
+import sys, os, datetime
 import serial.tools.list_ports
 import pandas as pd
 import numpy as np
+import pyqtgraph as pg
 import fastgoertzel as fg
-from scipy.signal import argrelextrema, medfilt
+from scipy.signal import medfilt
 import crcmod
 
 class DataProcessor:
     """Класс для обработки данных"""
-    
     @staticmethod
     def process_raw_data(ADC: bytes, EDC: bytes) -> pd.DataFrame:
         """Перевод байтовой строки в числа"""
@@ -54,9 +51,6 @@ class DataProcessor:
     @staticmethod
     def apply_median_filter(df: pd.DataFrame, window_size:int=3) -> pd.DataFrame:
         """Применение медианного фильтра для удаления дельта-выбросов"""
-        # df_filtered = pd.DataFrame(columns=['encoder', 'data'])
-        # df_filtered['data'] = medfilt(df['data'], kernel_size=window_size)[window_size*2:-window_size*2]
-        # df_filtered['encoder'] = medfilt(df['encoder'], kernel_size=window_size)[window_size*2:-window_size*2]
         trim_offset = window_size // 2
         return pd.DataFrame({
                     'encoder': medfilt(df.encoder, kernel_size=window_size)[trim_offset:-trim_offset],
@@ -70,17 +64,13 @@ class DataProcessor:
         diff_enc = df['encoder'].shift(1) - df['encoder']
         split_points = df.index[diff_enc.abs() > 1000]  # по модулю, чтобы не зависеть от направления
 
-        # print(f'Найдено {len(split_points)-1} периодов энкодера')
-
         if len(split_points) in (0, 1):
-            # print("Warning: Нет переходов нуля энкодера.")
             return df
         else:
             start_idx = split_points[0]
             end_idx = split_points[-1]
             # Проверка, чтобы start_idx был меньше end_idx
             if start_idx >= end_idx:
-                # print(f"Warning: start_idx ({start_idx}) >= end_idx ({end_idx}). Returning original DataFrame.")
                 return df
             else:
                 return df.iloc[start_idx:end_idx].copy()
@@ -99,22 +89,18 @@ class DataProcessor:
         df_res['integral'] = -1.0*df_res.data.cumsum()
 
         # 4. Пересчет в Вольты*метры*секунды
-        #  2.5/32767 - коэф. для перевода в Вольты, 1/96937 в сек (timebase), 1/1144.8 в м (постоянная катушки)
+        #  ADC_VOLT_REFERENCE/ADC_BIT_COUNT - коэф. для перевода в Вольты, 1/TIMEBASE_CONSTANT в сек (timebase), 1/COIL_CONSTANT в м (постоянная катушки)
         df_res['volts'] = (ADC_VOLT_REFERENCE/ADC_BIT_COUNT / TIMEBASE_CONSTANT / COIL_CONSTANT)*df_res['integral']
 
         # 5. Детренд
-
         x = df_res.index.values
         y = df_res.volts.values
-
         # Координаты первой и последней точек
         x0, x1 = x[0], x[-1]
         y0, y1 = y[0], y[-1]
-
         # Уравнение прямой через две точки: y_trend = a * x + b
         a = (y1 - y0) / (x1 - x0) if x1 != x0 else 0
         b = y0 - a * x0
-
         # Вычисляем трендовую составляющую и вычитаем
         y_trend = a * x + b
         df_res['detrend'] = y - y_trend
@@ -221,10 +207,6 @@ class MeasurementManager:
 
         return (final_amplitude, theta_deg, phase_xy)
     
-    # def get_individual_results(self): TODO Удалить
-    #     """Получить результаты отдельных измерений"""
-    #     return self.measurements.copy()
-
 class MainUI(QMainWindow):
     def __init__(self):
         super(MainUI, self).__init__()
