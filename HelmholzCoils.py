@@ -247,10 +247,6 @@ class MeasurementManager:
         
         return (final_amplitude, final_absolute_error, final_relative_error, theta_deg)
     
-    def get_individual_results(self):
-        """Получить результаты отдельных измерений"""
-        return self.measurements.copy()
-
 class MainUI(QMainWindow):
     def __init__(self):
         super(MainUI, self).__init__()
