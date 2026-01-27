@@ -334,17 +334,17 @@ class MainUI(QMainWindow):
         for port in ports:
             self.cBox_MotorPort.addItem(port.device)
 
-            self.serial_sensor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
-            self.serial_sensor.data_ready.connect(self.on_data_received)
-            self.serial_sensor.finished.connect(self.on_read_sensor_finished)
-            self.serial_sensor.error.connect(self.on_serial_error)
-            self.serial_sensor.start()
+            # self.serial_sensor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
+            # self.serial_sensor.data_ready.connect(self.on_data_received)
+            # self.serial_sensor.finished.connect(self.on_read_sensor_finished)
+            # self.serial_sensor.error.connect(self.on_serial_error)
+            # self.serial_sensor.start()
 
-            self.serial_motor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
-            self.serial_motor.data_ready.connect(self.on_data_received)
-            self.serial_motor.finished.connect(self.on_read_sensor_finished)
-            self.serial_motor.error.connect(self.on_serial_error)
-            self.serial_motor.start()
+            # self.serial_motor = SerialWorker(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, timeout=1, command=f'ON\SHOW inp1\rOFF\r')
+            # self.serial_motor.data_ready.connect(self.on_data_received)
+            # self.serial_motor.finished.connect(self.on_read_sensor_finished)
+            # self.serial_motor.error.connect(self.on_serial_error)
+            # self.serial_motor.start()
 
             try:
                 with serial.Serial(port=port.device, baudrate=MOTOR_SERIAL_BAUDRATE, bytesize=8, parity='N', stopbits=1, timeout=1) as serialData:
@@ -373,8 +373,6 @@ class MainUI(QMainWindow):
             except Exception as e:
                 self.on_serial_error(f"Ошибка чтения порта датчика: {str(e)}")
               
-
-
     def init_graph(self):
         """Инициализация графика"""
         self.plot_widget = pg.PlotWidget(self)
@@ -453,13 +451,8 @@ class MainUI(QMainWindow):
             self.on_serial_error(f"Ошибка чтения датчика: {str(e)}")
         if dataReady == b'1\n':
             TIMEBASE_CONSTANT = int(float(dataRead.decode().split('F=')[1].split()[0].replace(',','.'))*1000)  # Постоянная времени системы [мкс]
-            self.on_read_sensor_finished()
-
-    def on_read_sensor_finished(self):
-        """Обработка завершения чтения датчика"""
-        self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
-        QTimer.singleShot(500, self.get_data)
-        
+            self.show_status_message("Измерение проведено, получаем данные... Можно перевернуть магнит", timeout=60000)
+            QTimer.singleShot(500, self.get_data)
     
     def get_data(self):
         """Получение данных после чтения датчика"""
@@ -501,7 +494,8 @@ class MainUI(QMainWindow):
 
         if len(ADC) == len(EDC):
             self.on_data_received(ADC, EDC)
-            self.on_get_data_finished()
+            # После завершения измерения спрашиваем пользователя
+            self.ask_measurement_action()
         else:
             QMessageBox.warning(self, "Считывание", "Данные с датчика не совпадают с данными энкодера. Проверьте подключение.")
     
@@ -531,11 +525,6 @@ class MainUI(QMainWindow):
 
         except Exception as e:
             self.on_serial_error(f"Ошибка обработки данных: {str(e)}")
-    
-    def on_get_data_finished(self):
-        """Обработка завершения получения данных"""
-        # После завершения измерения спрашиваем пользователя
-        self.ask_measurement_action()
 
     def save_data(self):
         """Сохраняет заголовок и результат измерения в выбранный пользователем файл."""
