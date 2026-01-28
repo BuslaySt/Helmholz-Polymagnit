@@ -5,3 +5,5 @@
 /data
 /dev
 *.csv
+/code
+/drivers
