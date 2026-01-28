@@ -16,7 +16,7 @@ ADC_VOLT_REFERENCE = 2.5        # Опорное напряжение АЦП [В
 ADC_BIT_COUNT = 32767           # Максимальное значение АЦП (±16 бит)
 TIMEBASE_CONSTANT = 100000       # Постоянная времени системы [мкс]
 COIL_CONSTANT = 1144.8          # Постоянная катушки [1/м]
-ENCODER_PULSES_PER_REV = 10000  # Количество импульсов энкодера на оборот
+ENCODER_PULSES_PER_REV = 2000  # Количество импульсов энкодера на оборот
 
 # --- КОНЕЦ: Пользовательские переменные ---
 
@@ -435,7 +435,6 @@ class MainUI(QMainWindow):
                         dataEDC = lineEDC[6:-3]
                         crcEDC = lineEDC[-3:-1]
                         if crc16_func(dataEDC) == int.from_bytes(crcEDC, 'big'):
-
                             EDCsuccess = True
                         else:
                             # self.on_serial_error(f"Ошибка контрольной суммы данных энкодера")
@@ -448,7 +447,7 @@ class MainUI(QMainWindow):
                         ADC += dataADC
                         EDC += dataEDC
                     else:
-                        self.on_serial_error(f"Ошибка cчитывания данных с порта датчика")
+                        print(f"Ошибка cчитывания данных с порта датчика, потеря данных")
         except Exception as e:
             self.on_serial_error(f"Ошибка cчитывания данных с порта датчика: {str(e)}")
 
