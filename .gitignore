@@ -1,11 +1,7 @@
 /venv
 /doc
-/drivers
 /motorSoft
 /img
 /data
 /dev
-/code
-/code_old
 *.csv
-/code
