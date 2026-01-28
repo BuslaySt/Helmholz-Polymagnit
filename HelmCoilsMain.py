@@ -295,10 +295,8 @@ class MainUI(QMainWindow):
             
             self.cBox_SensorPort.addItem(port.device)
             try:
-                with serial.Serial(port=port.device, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1) as serialData:
-                    # Read data from Sensor
+                with serial.Serial(port=port.device, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, parity='N', stopbits=1, timeout=1) as serialData:
                     command = f'R0;1\n'
-                    # Send the command to the DataPort
                     serialData.write(command.encode())
                     dataRead = serialData.readline()
                     dataReady = serialData.readline()
@@ -306,9 +304,13 @@ class MainUI(QMainWindow):
                         self.sensor_port = port.device
                         self.cBox_SensorPort.setCurrentText(port.device)
             except Exception as e:
-                self.on_serial_error(f"Ошибка чтения порта датчика: {str(e)}")
-              
-
+                print(f"Ошибка чтения порта датчика: {str(e)}")
+                # self.on_serial_error(f"Ошибка чтения порта датчика: {str(e)}")
+        
+        if not hasattr(self, 'motor_port'):
+            self.on_serial_error(f"Ошибка чтения порта двигателя")
+        if not hasattr(self, 'sensor_port'):
+            self.on_serial_error(f"Ошибка чтения порта датчика")
 
     def init_graph(self):
         """Инициализация графика"""
