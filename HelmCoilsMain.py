@@ -225,6 +225,7 @@ class MainUI(QMainWindow):
         self.init_ui()
         self.init_graph()
         
+        
     def init_ui(self):
         """Инициализация интерфейса"""
         # Загрузка логотипа
@@ -252,14 +253,13 @@ class MainUI(QMainWindow):
         header_text = f'{now}; {temperature}\nНомер магнита: \nОписание: '
         self.txtEd_FileHeader.setPlainText(header_text)
         
-        # Инициализация портов
-        self.refresh_ports()
-        
         # Скрываем прогресс бар изначально
         self.progressBar.setVisible(False)
         
         self.update_buttons_state(True)
         self.show_status_message("Готов к работе")
+        # Инициализация портов
+        QTimer.singleShot(100, self.refresh_ports)
 
     def load_logo(self):
         """Загрузка логотипа"""
@@ -401,6 +401,7 @@ class MainUI(QMainWindow):
         """Получение данных после чтения датчика"""
         ADC = b''
         EDC = b''
+        max_retries = 3
         # Создаём объект CRC-16-CCITT-ZERO
         crc16_func = crcmod.mkCrcFun(
             poly=0x11021,      # Полином: x^16 + x^12 + x^5 + 1 (0x1021, но с битом переноса)
@@ -412,26 +413,42 @@ class MainUI(QMainWindow):
             with (serial.Serial(port=self.sensor_port, baudrate=SENSOR_SERIAL_BAUDRATE, bytesize=8, stopbits=1, timeout=1)) as serialData:
                 for i in range(0, DATA_READ_SIZE, DATA_READ_SIZE_STEP):
 
-                    command = f'S{i};{DATA_READ_SIZE_STEP}\n'
-                    serialData.write(command.encode())
+                    for retry in range(max_retries):
+                        retry_read = False
+                        ADCsuccess = False
+                        EDCsuccess = False
 
-                    lineADC = serialData.read(2*DATA_READ_SIZE_STEP+9)
-                    dataADC = lineADC[6:-3]
-                    crcADC = lineADC[-3:-1]
-                    if crc16_func(dataADC) != int.from_bytes(crcADC, 'big'):
-                        self.on_serial_error(f"Ошибка контрольной суммы данных датчика")
-                        print('DataADC not ok')
-                    else:
+                        command = f'S{i};{DATA_READ_SIZE_STEP}\n'
+                        serialData.write(command.encode())
+
+                        lineADC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                        dataADC = lineADC[6:-3]
+                        crcADC = lineADC[-3:-1]
+                        if crc16_func(dataADC) == int.from_bytes(crcADC, 'big'):
+                            ADCsuccess = True
+                        else:
+                            # self.on_serial_error(f"Ошибка контрольной суммы данных датчика")
+                            print('DataADC not ok')
+                            retry_read = True
+
+                        lineEDC = serialData.read(2*DATA_READ_SIZE_STEP+9)
+                        dataEDC = lineEDC[6:-3]
+                        crcEDC = lineEDC[-3:-1]
+                        if crc16_func(dataEDC) == int.from_bytes(crcEDC, 'big'):
+
+                            EDCsuccess = True
+                        else:
+                            # self.on_serial_error(f"Ошибка контрольной суммы данных энкодера")
+                            print('DataEDC not ok')
+                            retry_read = True
+                        if not retry_read:
+                            break
+
+                    if (ADCsuccess and EDCsuccess):
                         ADC += dataADC
-
-                    lineEDC = serialData.read(2*DATA_READ_SIZE_STEP+9)
-                    dataEDC = lineEDC[6:-3]
-                    crcEDC = lineEDC[-3:-1]
-                    if crc16_func(dataEDC) != int.from_bytes(crcEDC, 'big'):
-                        self.on_serial_error(f"Ошибка контрольной суммы данных энкодера")
-                        print('DataEDC not ok')
-                    else:
                         EDC += dataEDC
+                    else:
+                        self.on_serial_error(f"Ошибка cчитывания данных с порта датчика")
         except Exception as e:
             self.on_serial_error(f"Ошибка cчитывания данных с порта датчика: {str(e)}")
 
